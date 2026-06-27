@@ -29,7 +29,7 @@ the payload.
 | Attio Agentic CRM | n8n should create/update author, institution, paper and follow-up task records from the `paper.submitted` payload. | REST API validated; n8n write nodes still needed |
 | Superlinked | n8n should call Peerflow's reviewer-matching backend or Superlinked directly. | Backend route live |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
-| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Configured; needs active production workflow and downstream nodes |
+| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Published; accepts webhook events; downstream nodes still needed |
 | SLNG | Planned voice intake for author submission briefs. | Key configured; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
@@ -67,9 +67,9 @@ the payload.
 - Superlinked: Peerflow reviewer-matching backend is live for n8n to call.
 - Aikido: configured report link.
 - SLNG: configured key; real API endpoint still needed.
-- n8n: production-style webhook path configured locally, but the endpoint still
-  returns `404`. Activate the workflow in n8n and use the production
-  `/webhook/...` URL.
+- n8n: production workflow is published and accepts `paper.submitted` events;
+  Attio write, reviewer matching, outreach/task and stage-update nodes still
+  need to be added.
 
 ## Backup Plan
 
@@ -82,7 +82,7 @@ If a live provider is slow during judging:
 
 ## Final Submission Checklist
 
-- [ ] Activate the n8n workflow and confirm the production webhook returns
+- [x] Activate the n8n workflow and confirm the production webhook returns
       `live`.
 - [ ] Add n8n nodes for Attio writes, reviewer matching, outreach/tasks and
       stage update.
