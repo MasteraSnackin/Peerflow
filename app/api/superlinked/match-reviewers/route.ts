@@ -22,6 +22,7 @@ function reviewerProfile(reviewer: (typeof reviewers)[number]) {
     reviewer.institution,
     reviewer.speciality,
     reviewer.availability,
+    `Past review topics: ${reviewer.pastTopics.join(", ")}`,
   ].join(". ");
 }
 

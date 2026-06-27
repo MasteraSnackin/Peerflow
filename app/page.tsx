@@ -37,7 +37,8 @@ const integrationDefinitions = [
   {
     service: "Superlinked",
     keys: ["SUPERLINKED_ENDPOINT", "SUPERLINKED_API_KEY"],
-    purpose: "Reviewer matching service called by n8n or Peerflow backend.",
+    purpose:
+      "Semantic matching between paper profiles and reviewer expertise profiles.",
   },
   {
     service: "Tavily",

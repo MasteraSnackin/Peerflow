@@ -48,6 +48,27 @@ const papers = [
   },
 ];
 
+const reviewerMatches = [
+  {
+    name: "Amara Osei",
+    institution: "Imperial College London",
+    speciality: "Clinical retrieval",
+    fit: 94,
+  },
+  {
+    name: "Tom Reeve",
+    institution: "Oxford Internet Institute",
+    speciality: "AI governance",
+    fit: 88,
+  },
+  {
+    name: "Elena Varga",
+    institution: "Cambridge Machine Learning Group",
+    speciality: "Multimodal benchmarks",
+    fit: 83,
+  },
+];
+
 function slugify(value) {
   return (
     value
@@ -157,6 +178,14 @@ async function createTask(paper, company, person) {
         `Institution: ${paper.institution}`,
         `Field: ${paper.field}`,
         "Stage: Reviewer matched",
+        "Matching method: Superlinked semantic matching, not keyword search.",
+        "Paper profile embedded: title + abstract + field.",
+        "Reviewer profiles embedded: expertise + institution + past review topics.",
+        "Top reviewer matches:",
+        ...reviewerMatches.map(
+          (reviewer, index) =>
+            `${index + 1}. ${reviewer.name} - ${reviewer.fit}% fit - ${reviewer.institution} - ${reviewer.speciality}`,
+        ),
         "Next step: contact top reviewer candidates and log response.",
       ].join("\n"),
       format: "plaintext",

@@ -13,6 +13,7 @@ export type Reviewer = {
   name: string;
   institution: string;
   speciality: string;
+  pastTopics: string[];
   fit: number;
   availability: string;
 };
@@ -96,6 +97,11 @@ export const reviewers: Reviewer[] = [
     name: "Amara Osei",
     institution: "Imperial College London",
     speciality: "Clinical retrieval",
+    pastTopics: [
+      "multimodal medical retrieval",
+      "clinical evidence triage",
+      "healthcare benchmark review",
+    ],
     fit: 94,
     availability: "2 reviews open",
   },
@@ -103,6 +109,11 @@ export const reviewers: Reviewer[] = [
     name: "Tom Reeve",
     institution: "Oxford Internet Institute",
     speciality: "AI governance",
+    pastTopics: [
+      "public sector model routing",
+      "auditability",
+      "risk review workflows",
+    ],
     fit: 88,
     availability: "Available this week",
   },
@@ -110,6 +121,11 @@ export const reviewers: Reviewer[] = [
     name: "Elena Varga",
     institution: "Cambridge Machine Learning Group",
     speciality: "Multimodal benchmarks",
+    pastTopics: [
+      "multimodal evaluation",
+      "retrieval benchmarks",
+      "dataset quality",
+    ],
     fit: 83,
     availability: "1 review open",
   },
@@ -146,17 +162,17 @@ export const workflowSteps: WorkflowStep[] = [
   },
   {
     id: "match",
-    title: "Match peer reviewers",
+    title: "Semantic reviewer matching",
     owner: "n8n -> Superlinked",
     detail:
-      "n8n calls Peerflow's reviewer-matching backend or Superlinked directly to rank reviewers.",
+      "Superlinked semantically compares paper title, abstract and field against reviewer expertise, institution and past review topics, then returns the top 3 reviewer matches with fit scores.",
   },
   {
     id: "outreach",
     title: "Create reviewer outreach",
     owner: "n8n",
     detail:
-      "n8n sends reviewer outreach or creates follow-up tasks for the editorial team.",
+      "n8n pushes the top reviewer matches into the Attio follow-up task for the editorial team.",
   },
   {
     id: "stage",

@@ -115,7 +115,7 @@ export default function AgentConsole({
       }
       if (step.id === "match") {
         const source =
-          "n8n calls Peerflow /api/superlinked/match-reviewers or Superlinked SIE";
+          "Superlinked semantic matching: title + abstract + field compared with reviewer expertise + institution + past topics. Not keyword search.";
         setLiveReviewers(reviewers);
         setMatchSource(source);
         detail = `${step.detail} Outcome: ${source}.`;
@@ -301,6 +301,11 @@ export default function AgentConsole({
           <p className="mt-4 text-xs font-medium text-[#9fb3ad]">
             Attio: {attioSource}
           </p>
+          {completedSet.has("match") ? (
+            <p className="mt-2 text-xs font-medium text-[#9fb3ad]">
+              Reviewer matches pushed into Attio follow-up task payload.
+            </p>
+          ) : null}
         </div>
 
         <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
@@ -315,6 +320,12 @@ export default function AgentConsole({
           <p className="mt-2 text-xs font-medium text-[#60706c]">
             {matchSource}
           </p>
+          {completedSet.has("match") ? (
+            <p className="mt-2 text-xs leading-5 text-[#60706c]">
+              Semantic profile: paper title + abstract + field matched against
+              reviewer expertise + institution + past review topics.
+            </p>
+          ) : null}
           <div className="mt-3 divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
             {matchedReviewers.map((reviewer) => (
               <div
@@ -330,6 +341,9 @@ export default function AgentConsole({
                   </p>
                   <p className="mt-1 text-xs text-[#60706c]">
                     {reviewer.availability}
+                  </p>
+                  <p className="mt-1 text-xs text-[#60706c]">
+                    Past topics: {reviewer.pastTopics.join(", ")}
                   </p>
                 </div>
                 <div className="text-right text-lg font-semibold text-[#19a886]">

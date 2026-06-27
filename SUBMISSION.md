@@ -27,7 +27,7 @@ the payload.
 | Track or sponsor | How Peerflow uses it | Current status |
 | --- | --- | --- |
 | Attio Agentic CRM | Peerflow creates/updates demo author, institution and follow-up task records through the Attio REST API; n8n import workflow includes Attio write nodes for the live orchestration path. | REST API read/write live; native Attio visual workflow not implemented |
-| Superlinked | n8n should call Peerflow's reviewer-matching backend or Superlinked directly. | Backend route live |
+| Superlinked | Semantic matching between paper title, abstract and field, and reviewer expertise, institution and past review topics. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Published webhook accepts events; importable downstream workflow file is ready |
 | SLNG | Author speaks a submission request; SLNG turns it into structured text; Peerflow extracts title, field, author, institution and summary for the intake record. | Key configured; agent log proof shown; endpoint not implemented |

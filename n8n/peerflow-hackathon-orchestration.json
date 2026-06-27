@@ -138,14 +138,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const source = $('Build orchestration payloads').first().json;\nlet reviewerMatches = [];\nlet reviewerSource = 'Reviewer matching response unavailable';\nlet attioTaskId = null;\nlet attioTaskSource = 'Attio task creation not confirmed';\n\ntry {\n  const reviewerResponse = $('Match reviewers through Peerflow backend').first().json;\n  reviewerMatches = Array.isArray(reviewerResponse.matches) ? reviewerResponse.matches : [];\n  reviewerSource = reviewerResponse.source ?? reviewerSource;\n} catch (error) {\n  reviewerSource = String(error.message ?? error);\n}\n\ntry {\n  const taskResponse = $('Attio create outreach task').first().json;\n  attioTaskId = taskResponse.data?.id?.task_id ?? null;\n  attioTaskSource = attioTaskId ? 'Attio task created' : 'Attio task request attempted';\n} catch (error) {\n  attioTaskSource = String(error.message ?? error);\n}\n\nreturn [\n  {\n    json: {\n      mode: 'live',\n      event: source.event,\n      runId: source.runId,\n      orchestrationOwner: 'n8n',\n      nextStage: source.targetStage,\n      paper: {\n        id: source.paper.id,\n        title: source.paper.title,\n        stage: source.targetStage\n      },\n      attio: {\n        institutionUpsert: 'attempted',\n        authorUpsert: 'attempted',\n        outreachTask: attioTaskSource,\n        outreachTaskId: attioTaskId,\n        variableRequired: 'ATTIO_API_KEY'\n      },\n      reviewerMatching: {\n        source: reviewerSource,\n        matches: reviewerMatches.slice(0, 3)\n      },\n      outreachTask: {\n        ...source.outreachTask,\n        createdBy: 'n8n workflow'\n      },\n      stageUpdate: {\n        from: source.currentStage,\n        to: source.targetStage,\n        updatedBy: 'n8n workflow'\n      }\n    }\n  }\n];"
+        "jsCode": "const source = $('Build orchestration payloads').first().json;\nlet reviewerMatches = [];\nlet reviewerSource = 'Reviewer matching response unavailable';\nlet attioTaskId = null;\nlet attioTaskSource = 'Attio task creation not confirmed';\n\ntry {\n  const matchTask = $('Build Attio task with reviewer matches').first().json;\n  reviewerMatches = Array.isArray(matchTask.reviewerMatching?.matches) ? matchTask.reviewerMatching.matches : [];\n  reviewerSource = matchTask.reviewerMatching?.source ?? reviewerSource;\n} catch (error) {\n  reviewerSource = String(error.message ?? error);\n}\n\ntry {\n  const taskResponse = $('Attio create outreach task').first().json;\n  attioTaskId = taskResponse.data?.id?.task_id ?? null;\n  attioTaskSource = attioTaskId ? 'Attio task created with reviewer matches' : 'Attio task request attempted';\n} catch (error) {\n  attioTaskSource = String(error.message ?? error);\n}\n\nreturn [\n  {\n    json: {\n      mode: 'live',\n      event: source.event,\n      runId: source.runId,\n      orchestrationOwner: 'n8n',\n      nextStage: source.targetStage,\n      paper: {\n        id: source.paper.id,\n        title: source.paper.title,\n        stage: source.targetStage\n      },\n      attio: {\n        institutionUpsert: 'attempted',\n        authorUpsert: 'attempted',\n        outreachTask: attioTaskSource,\n        outreachTaskId: attioTaskId,\n        reviewerMatchesPushed: reviewerMatches.length,\n        variableRequired: 'ATTIO_API_KEY'\n      },\n      reviewerMatching: {\n        method: 'Superlinked semantic matching, not keyword search',\n        source: reviewerSource,\n        profileInputs: 'paper title + abstract + field vs reviewer expertise + institution + past review topics',\n        matches: reviewerMatches.slice(0, 3)\n      },\n      outreachTask: {\n        ...source.outreachTask,\n        createdBy: 'n8n workflow'\n      },\n      stageUpdate: {\n        from: source.currentStage,\n        to: source.targetStage,\n        updatedBy: 'n8n workflow'\n      }\n    }\n  }\n];"
       },
       "id": "184b5552-9f78-4b0d-b938-39c7c38d38f8",
       "name": "Create outreach and update stage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1020,
+        1280,
         0
       ]
     },
@@ -162,7 +162,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1280,
+        1540,
         0
       ]
     },
@@ -185,7 +185,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $node['Build orchestration payloads'].json.attioTaskPayload }}",
+        "jsonBody": "={{ $node['Build Attio task with reviewer matches'].json.attioTaskPayload }}",
         "options": {}
       },
       "id": "33c87857-b969-44a2-8a78-8e7b7ff8a7f0",
@@ -193,10 +193,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        760,
+        1020,
         0
       ],
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Build orchestration payloads').first().json;\nlet matches = [];\nlet matchSource = 'Reviewer matching response unavailable';\n\ntry {\n  const response = $('Match reviewers through Peerflow backend').first().json;\n  matches = Array.isArray(response.matches) ? response.matches.slice(0, 3) : [];\n  matchSource = response.source ?? matchSource;\n} catch (error) {\n  matchSource = String(error.message ?? error);\n}\n\nconst matchLines = matches.length\n  ? matches.map((match, index) => String(index + 1) + '. ' + match.name + ' - ' + match.fit + '% fit - ' + match.institution + ' - ' + match.speciality)\n  : ['No reviewer matches returned.'];\n\nreturn [\n  {\n    json: {\n      ...source,\n      reviewerMatching: {\n        source: matchSource,\n        matches\n      },\n      attioTaskPayload: {\n        data: {\n          content: [\n            'Peerflow reviewer outreach: ' + source.paper.title,\n            'Paper profile embedded: title + abstract + field',\n            'Reviewer profiles embedded: expertise + institution + past review topics',\n            'Matching method: Superlinked semantic matching, not keyword search',\n            'Stage: ' + source.targetStage,\n            'Top reviewer matches:',\n            ...matchLines,\n            'Next step: contact top reviewer candidates and log response.'\n          ].join('\\n'),\n          format: 'plaintext',\n          deadline_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),\n          is_completed: false,\n          assignees: [],\n          linked_records: []\n        }\n      }\n    }\n  }\n];"
+      },
+      "id": "8912236d-2e1c-4231-a4b3-b93d0c8f6475",
+      "name": "Build Attio task with reviewer matches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        0
+      ]
     }
   ],
   "pinData": {},
@@ -260,7 +273,7 @@
       "main": [
         [
           {
-            "node": "Attio create outreach task",
+            "node": "Build Attio task with reviewer matches",
             "type": "main",
             "index": 0
           }
@@ -283,6 +296,17 @@
         [
           {
             "node": "Create outreach and update stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Attio task with reviewer matches": {
+      "main": [
+        [
+          {
+            "node": "Attio create outreach task",
             "type": "main",
             "index": 0
           }

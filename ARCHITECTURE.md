@@ -34,7 +34,7 @@ metadata, abstracts and authorised links.
 - Let Aida answer only when supporting corpus evidence is available.
 - Use n8n as the orchestration layer for CRM writes, reviewer matching,
   outreach and paper-stage updates.
-- Use Superlinked SIE to rerank reviewer matches when configured.
+- Use Superlinked SIE for semantic reviewer matching when configured.
 - Make future Attio, SLNG and Aikido integrations clear and pluggable via
   environment variables.
 - Avoid overstating production readiness: persistence, authentication,
@@ -159,12 +159,13 @@ scaffolded infrastructure, but no application data is currently persisted there.
 
 ### Superlinked Matching API Route
 
-- Responsibilities: rerank reviewer profiles against a selected paper and
-  normalise SIE scores into judge-friendly fit percentages.
+- Responsibilities: semantically match paper profiles against reviewer profiles
+  and normalise SIE scores into judge-friendly fit percentages.
 - Main technologies: Next-style `POST` route, TypeScript and
   `@superlinked/sie-sdk`.
-- Data owned or transformed: selected paper profile, reviewer profile strings,
-  raw SIE scores, normalised fit values and fallback reviewer matches.
+- Data owned or transformed: selected paper title, abstract and field; reviewer
+  expertise, institution and past review topics; raw SIE scores; normalised fit
+  values; and fallback reviewer matches.
 - External dependencies: Superlinked SIE endpoint and key. The default rerank
   model is `cross-encoder/ms-marco-MiniLM-L-6-v2`, with GPU lane defaulting to
   `l4`.
@@ -295,8 +296,9 @@ scaffolded infrastructure, but no application data is currently persisted there.
 8. Prepared import workflow: create or update Attio author and institution demo
    records using the same payload shapes proven by `npm run attio:seed`.
 9. Prepared import workflow: call `/api/superlinked/match-reviewers` through
-   the callback URL in the payload.
-10. Prepared import workflow: create a reviewer outreach task payload.
+   the callback URL in the payload to get top 3 semantic reviewer matches.
+10. Prepared import workflow: create a reviewer outreach task payload that
+   carries those matches into Attio.
 11. Prepared import workflow: update the paper stage to `Reviewer matched`.
 12. The browser renders the n8n trigger status, planned reviewer preview and
     Attio-style record preview.

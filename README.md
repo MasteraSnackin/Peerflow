@@ -107,7 +107,7 @@ can be plugged in without exposing credentials to the browser.
 | --- | --- | --- |
 | Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
 | n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes are in `n8n/peerflow-hackathon-orchestration.json`; the cloud workflow still needs sign-in/import/publish. |
-| Superlinked | Reviewer matching through SIE reranking. | Backend route is ready for n8n to call; it uses SIE when endpoint/key are configured and falls back visibly otherwise. |
+| Superlinked | Semantic matching between paper profiles and reviewer expertise profiles. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
 | SLNG | Voice intake for author submission briefs. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible. Production voice capture is still planned. |
