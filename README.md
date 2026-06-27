@@ -23,6 +23,7 @@ legal open-access metadata, abstracts and authorised links.
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
+- [Architecture Diagrams](#architecture-diagrams)
 - [Live Integration Status](#live-integration-status)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -102,6 +103,11 @@ the event payload; the repository workflow JSON contains the downstream nodes
 for the full orchestration path.
 SLNG and Aikido are configured through environment variables so live services
 can be plugged in without exposing credentials to the browser.
+
+## Architecture Diagrams
+
+See [docs/DIAGRAMS.md](docs/DIAGRAMS.md) for C1-C4 diagrams, data flow,
+sequence diagrams, trust boundary, state, deployment and proof-map views.
 
 ## Live Integration Status
 
