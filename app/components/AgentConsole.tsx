@@ -21,29 +21,24 @@ type LogEntry = {
   detail: string;
 };
 
-type ReviewerMatchResponse = {
-  matches: Reviewer[];
-  mode: "live" | "mock";
-  source: string;
-};
-
-type AttioStatusResponse = {
-  mode: "live" | "mock";
-  source: string;
-  objects: string[];
-};
-
 type N8nTriggerResponse = {
+  event: string;
   mode: "live" | "mock";
+  nextStage: string;
+  orchestrationOwner: string;
   source: string;
   runId: string | null;
 };
 
 const stageLabels = [
   "Discovered",
-  "Author contacted",
-  "Submitted",
+  "Intake parsed",
+  "Submitted to n8n",
+  "Attio upsert queued",
+  "Reviewer matching",
+  "Outreach queued",
   "Reviewer matched",
+  "Demo ready",
 ];
 
 export default function AgentConsole({
@@ -57,8 +52,12 @@ export default function AgentConsole({
   const [log, setLog] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [liveReviewers, setLiveReviewers] = useState<Reviewer[] | null>(null);
-  const [matchSource, setMatchSource] = useState("local mock scores");
-  const [attioSource, setAttioSource] = useState("local record preview");
+  const [matchSource, setMatchSource] = useState(
+    "waiting for n8n reviewer orchestration",
+  );
+  const [attioSource, setAttioSource] = useState(
+    "waiting for n8n Attio orchestration",
+  );
   const [workflowSource, setWorkflowSource] = useState("waiting for agent run");
 
   const selectedPaper =
@@ -72,53 +71,18 @@ export default function AgentConsole({
     ? (liveReviewers ?? reviewers)
     : reviewers.slice(0, 1);
 
-  async function validateAttio() {
-    try {
-      const response = await fetch("/api/attio/status");
-      const result = (await response.json()) as AttioStatusResponse;
-      const source = `${result.mode} | ${result.source}`;
-      setAttioSource(source);
-      return source;
-    } catch {
-      const source = "mock | Attio validation fallback";
-      setAttioSource(source);
-      return source;
-    }
-  }
-
-  async function matchWithSuperlinked() {
-    try {
-      const response = await fetch("/api/superlinked/match-reviewers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paperId: selectedPaper.id }),
-      });
-      const result = (await response.json()) as ReviewerMatchResponse;
-      setLiveReviewers(result.matches);
-      const source = `${result.mode} | ${result.source}`;
-      setMatchSource(source);
-      return { matches: result.matches, source };
-    } catch {
-      const source = "mock | local fallback";
-      setLiveReviewers(reviewers);
-      setMatchSource(source);
-      return { matches: reviewers, source };
-    }
-  }
-
-  async function triggerN8nWorkflow(workflowReviewers: Reviewer[]) {
+  async function submitPaperToN8n() {
     try {
       const response = await fetch("/api/n8n/trigger", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          event: "paper.submitted",
           paperId: selectedPaper.id,
-          stage: "reviewer-matched",
-          reviewers: workflowReviewers,
         }),
       });
       const result = (await response.json()) as N8nTriggerResponse;
-      const source = `${result.mode} | ${result.source}`;
+      const source = `${result.mode} | ${result.event ?? "paper.submitted"} | ${result.source}`;
       setWorkflowSource(source);
       return source;
     } catch {
@@ -133,25 +97,31 @@ export default function AgentConsole({
     setCompletedIds([]);
     setLog([]);
     setLiveReviewers(null);
-    setMatchSource("local mock scores");
-    setAttioSource("local record preview");
+    setMatchSource("waiting for n8n reviewer orchestration");
+    setAttioSource("waiting for n8n Attio orchestration");
     setWorkflowSource("waiting for agent run");
-    let workflowReviewers = reviewers;
 
     for (const step of steps) {
       await new Promise((resolve) => setTimeout(resolve, 620));
       let detail = step.detail;
+      if (step.id === "submit") {
+        const source = await submitPaperToN8n();
+        detail = `${step.detail} Outcome: ${source}.`;
+      }
       if (step.id === "crm") {
-        const source = await validateAttio();
+        const source = "n8n owns Attio create/update from paper.submitted";
+        setAttioSource(source);
         detail = `${step.detail} Outcome: ${source}.`;
       }
       if (step.id === "match") {
-        const result = await matchWithSuperlinked();
-        workflowReviewers = result.matches;
-        detail = `${step.detail} Outcome: ${result.source}.`;
+        const source =
+          "n8n calls Peerflow /api/superlinked/match-reviewers or Superlinked SIE";
+        setLiveReviewers(reviewers);
+        setMatchSource(source);
+        detail = `${step.detail} Outcome: ${source}.`;
       }
-      if (step.id === "workflow") {
-        const source = await triggerN8nWorkflow(workflowReviewers);
+      if (step.id === "outreach" || step.id === "stage") {
+        const source = "n8n downstream workflow";
         detail = `${step.detail} Outcome: ${source}.`;
       }
       setCompletedIds((current) => [...current, step.id]);
@@ -173,8 +143,8 @@ export default function AgentConsole({
     setLog([]);
     setIsRunning(false);
     setLiveReviewers(null);
-    setMatchSource("local mock scores");
-    setAttioSource("local record preview");
+    setMatchSource("waiting for n8n reviewer orchestration");
+    setAttioSource("waiting for n8n Attio orchestration");
     setWorkflowSource("waiting for agent run");
   }
 
@@ -187,8 +157,8 @@ export default function AgentConsole({
           </p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
             <h2 className="max-w-2xl break-words text-2xl font-semibold leading-tight sm:text-3xl">
-              Turn a legitimate open-access paper into a reviewer-ready Attio
-              pipeline.
+              Submit a paper once, then let n8n orchestrate CRM, matching and
+              outreach.
             </h2>
             <div className="flex flex-wrap gap-2">
               <button

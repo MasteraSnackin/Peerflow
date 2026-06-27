@@ -27,8 +27,10 @@ metadata, abstracts and authorised links.
   partner credentials.
 - Use legal open-access research metadata and citation evidence.
 - Let Aida answer only when supporting corpus evidence is available.
+- Use n8n as the orchestration layer for CRM writes, reviewer matching,
+  outreach and paper-stage updates.
 - Use Superlinked SIE to rerank reviewer matches when configured.
-- Make future Attio, n8n, SLNG and Aikido integrations clear and pluggable via
+- Make future Attio, SLNG and Aikido integrations clear and pluggable via
   environment variables.
 - Avoid overstating production readiness: persistence, authentication,
   observability and compliance controls are still limited.
@@ -52,9 +54,13 @@ flowchart LR
   CorpusService --> Tavily[Tavily Search and Extract]
   CorpusService --> Fallback[(Local fallback snippets)]
   AidaRoute --> Gemini[Gemini API]
+  N8nRoute --> N8N[n8n orchestration]
+  N8N --> AttioWrite[Attio create or update records]
+  N8N --> MatchRoute
+  N8N --> Outreach[Reviewer outreach or tasks]
+  N8N --> Stage[Reviewer matched stage]
   MatchRoute --> SIE[Superlinked SIE]
   AttioRoute --> Attio[Attio CRM]
-  N8nRoute --> N8N[n8n webhook]
   TavilyRoute --> Tavily
   App -. planned .-> SLNG[SLNG voice intake]
   App -. planned .-> Aikido[Aikido security report]
@@ -89,15 +95,15 @@ data is currently persisted there.
 ### Agent Console
 
 - Responsibilities: provide the interactive "Run agent" workflow, simulate
-  paper intake stages, display an Attio-style record preview, call reviewer
-  matching, validate the Attio workspace, trigger n8n orchestration and show an
-  in-session agent log.
+  paper intake stages, display an Attio-style record preview, emit one
+  `paper.submitted` event to n8n and show which downstream actions n8n owns.
 - Main technologies: React client component with local component state and
   browser `fetch`.
 - Data owned or transformed: selected paper ID, completed workflow step IDs,
-  reviewer match results and transient log entries.
-- External dependencies: calls `GET /api/attio/status`,
-  `POST /api/superlinked/match-reviewers` and `POST /api/n8n/trigger`.
+  n8n trigger status, planned reviewer preview and transient log entries.
+- External dependencies: calls `POST /api/n8n/trigger` during the agent run.
+  The Attio and Superlinked routes remain available for health checks or n8n
+  workflow calls.
 - Failure modes or operational concerns: the log and stage state are not
   persisted. Refreshing the page loses the run history.
 
@@ -176,13 +182,15 @@ data is currently persisted there.
 
 ### n8n Trigger API Route
 
-- Responsibilities: send the selected paper, current workflow stage and reviewer
-  matches to the configured n8n webhook.
+- Responsibilities: send one `paper.submitted` event to the configured n8n
+  webhook, including the selected paper, Attio record previews, required n8n
+  actions and the reviewer-matching backend callback URL.
 - Main technologies: Next-style `POST` route, TypeScript and server-side
   `fetch`.
-- Data owned or transformed: selected paper metadata, reviewer match summaries
-  and generated run ID.
-- External dependencies: `N8N_WEBHOOK_URL`.
+- Data owned or transformed: selected paper metadata, generated event ID, Attio
+  record preview objects and n8n orchestration instructions.
+- External dependencies: `N8N_WEBHOOK_URL`; optional `PEERFLOW_PUBLIC_URL` so
+  n8n Cloud can call Peerflow backend routes from outside localhost.
 - Failure modes or operational concerns: test webhooks may return `404` unless
   the n8n workflow is actively listening. The route returns a clearer
   mock/fallback status rather than blocking the demo.
@@ -244,18 +252,19 @@ data is currently persisted there.
    entries.
 2. The browser runs the local agent sequence in `AgentConsole`.
 3. For each step, the UI marks progress and writes a transient log entry.
-4. On the CRM step, the browser calls `/api/attio/status` to validate the
-   configured Attio workspace without creating records.
-5. On the reviewer matching step, the browser posts the paper ID to
-   `/api/superlinked/match-reviewers`.
-6. The server route builds text profiles for the paper and reviewers.
-7. If SIE credentials are present, the route calls Superlinked SIE and
-   normalises the scores.
-8. If SIE is unavailable, the route returns the mock reviewer list.
-9. On the workflow step, the browser posts the paper and reviewer summary to
+4. On the submission step, the browser posts the selected paper ID to
    `/api/n8n/trigger`.
-10. The browser renders reviewer matches, Attio validation status, n8n trigger
-    status and the Attio-style record preview.
+5. The server route builds a `paper.submitted` event with paper metadata, Attio
+   record previews, n8n required actions and a reviewer-matching callback URL.
+6. n8n receives the event and owns the downstream workflow.
+7. n8n creates or updates Attio author, institution, paper and follow-up task
+   records.
+8. n8n calls `/api/superlinked/match-reviewers` or Superlinked directly to get
+   reviewer matches.
+9. n8n sends reviewer outreach or creates follow-up tasks.
+10. n8n updates the paper stage to `Reviewer matched`.
+11. The browser renders the n8n trigger status, planned reviewer preview and
+    Attio-style record preview.
 
 ### Aida Q&A Flow
 
@@ -355,8 +364,8 @@ The browser can call five server routes:
 - `POST /api/n8n/trigger`
 - `POST /api/superlinked/match-reviewers`
 
-The client controls `questionId`, `paperId`, n8n stage text and reviewer
-summaries. The server selects papers from known static lists, constrains corpus
+The client controls `questionId` and `paperId`. The server selects papers from
+known static lists, builds the `paper.submitted` payload, constrains corpus
 search to legal open-access-friendly sources, keeps provider credentials
 server-side and treats all client-provided workflow payload fields as demo data
 rather than trusted CRM records.
@@ -435,10 +444,9 @@ Recommended additions:
 
 ## Future Improvements
 
-- Implement real Attio writes for authors, institutions, papers, notes, tasks
-  and review stages.
-- Invoke the configured n8n webhook during the agent workflow and surface run
-  status.
+- Build and publish the full n8n workflow for Attio writes, reviewer matching,
+  outreach/follow-up tasks and stage updates.
+- Persist n8n workflow run IDs and poll execution status.
 - Add SLNG voice capture, transcription and structured intake parsing.
 - Persist live Aida corpus results and add a legal open-access ingestion/vector
   retrieval pipeline.

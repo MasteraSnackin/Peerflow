@@ -21,12 +21,12 @@ const integrationDefinitions = [
   {
     service: "Attio",
     keys: ["ATTIO_API_KEY", "ATTIO_WORKSPACE_ID"],
-    purpose: "Create people, institutions, paper records, tasks and notes.",
+    purpose: "n8n creates or updates people, companies, paper records and tasks.",
   },
   {
     service: "n8n",
     keys: ["N8N_WEBHOOK_URL"],
-    purpose: "Orchestrate reviewer outreach and pipeline stage updates.",
+    purpose: "Receive paper.submitted and orchestrate CRM, matching and outreach.",
   },
   {
     service: "SLNG",
@@ -36,7 +36,7 @@ const integrationDefinitions = [
   {
     service: "Superlinked",
     keys: ["SUPERLINKED_ENDPOINT", "SUPERLINKED_API_KEY"],
-    purpose: "Match papers to reviewers through semantic similarity.",
+    purpose: "Reviewer matching service called by n8n or Peerflow backend.",
   },
   {
     service: "Tavily",

@@ -38,13 +38,13 @@ legal open-access metadata, abstracts and authorised links.
 ## Features
 
 - Paper intake for legitimate open-access research sources.
-- Attio-centred CRM workflow for authors, institutions, papers and review
-  stages, with live workspace validation when configured.
-- Superlinked SIE reviewer matching using open-source reranking.
+- n8n-centred orchestration for Attio CRM records, reviewer matching, outreach
+  and stage updates.
+- Superlinked SIE reviewer matching exposed as a backend route n8n can call.
 - Aida, a corpus-grounded assistant with live OpenAlex/Tavily retrieval and a
   no-citation, no-claim rule.
 - Tavily Search and Extract for supplemental open-access source discovery.
-- n8n webhook triggering during the agent workflow when configured.
+- n8n webhook triggering with a single `paper.submitted` event.
 - SLNG readiness and an Aikido security report link for the hackathon side
   challenges.
 - Mock-first demo data so the product works without live credentials.
@@ -69,15 +69,18 @@ legal open-access metadata, abstracts and authorised links.
 flowchart LR
   User[User or judge] --> WebApp[Peerflow web app]
   WebApp --> AidaAPI[/Aida API route/]
-  WebApp --> MatchAPI[/Superlinked match route/]
-  WebApp --> Workflow[n8n webhook]
+  WebApp --> SubmitEvent[/paper.submitted webhook/]
   WebApp --> Discovery[Tavily discovery]
+  SubmitEvent --> N8N[n8n orchestration]
+  N8N --> CRM[Attio CRM]
+  N8N --> MatchAPI[/Superlinked match route/]
+  N8N --> Outreach[Reviewer outreach or tasks]
+  N8N --> Stage[Reviewer matched stage]
   AidaAPI --> Gemini[Gemini model]
   AidaAPI --> OpenAlex[OpenAlex works API]
   AidaAPI --> Tavily[Tavily supplemental extract]
   AidaAPI --> Corpus[Local fallback corpus]
   MatchAPI --> SIE[Superlinked SIE]
-  WebApp --> CRM[Attio CRM]
   WebApp --> Voice[SLNG voice intake]
   WebApp --> Security[Aikido report]
 ```
@@ -85,9 +88,11 @@ flowchart LR
 The web app renders the demo surface and calls server-side API routes for model
 work. Aida retrieves live open-access abstracts through OpenAlex, supplements
 them with Tavily extraction when needed, and then asks Gemini to answer only
-from cited evidence. Reviewer matching is reranked through Superlinked SIE.
-Attio is validated through a read-only server route, and n8n can receive the
-workflow payload from the agent run. SLNG and Aikido are configured through
+from cited evidence. For the agent workflow, Peerflow emits one
+`paper.submitted` webhook to n8n. n8n is the orchestration layer: it should
+create or update Attio records, call Peerflow's Superlinked reviewer-matching
+route or Superlinked directly, create outreach/follow-up tasks and update the
+paper stage to `Reviewer matched`. SLNG and Aikido are configured through
 environment variables so live services can be plugged in without exposing
 credentials to the browser.
 
@@ -134,9 +139,9 @@ Typical demo flow:
 3. Ask Aida an unsupported question and show the refusal behaviour.
 4. Search open sources with Tavily and show the candidate source.
 5. Click `Run agent`.
-6. Show Attio workspace validation, Superlinked reviewer matching and the
-   Attio-style pipeline state.
-7. Show the n8n workflow trigger result in the agent log.
+6. Show Peerflow sending one `paper.submitted` event to n8n.
+7. Explain that n8n owns Attio upserts, reviewer matching, outreach/tasks and
+   the `Reviewer matched` stage update.
 8. Open the Aikido security report from the integration grid.
 9. Explain how SLNG voice intake fits into the workflow once connected.
 
@@ -149,6 +154,7 @@ to run live.
 ATTIO_API_KEY=
 ATTIO_WORKSPACE_ID=
 N8N_WEBHOOK_URL=
+PEERFLOW_PUBLIC_URL=
 SLNG_API_KEY=
 SUPERLINKED_ENDPOINT=
 SUPERLINKED_API_KEY=
@@ -175,7 +181,8 @@ Environment variable notes:
 | --- | --- |
 | `ATTIO_API_KEY` | Attio API key for workspace validation and future CRM writes. |
 | `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
-| `N8N_WEBHOOK_URL` | n8n webhook triggered during the agent workflow. |
+| `N8N_WEBHOOK_URL` | n8n production webhook that receives `paper.submitted`. |
+| `PEERFLOW_PUBLIC_URL` | Optional deployed or tunnelled base URL so n8n Cloud can call Peerflow backend routes. |
 | `SLNG_API_KEY` | SLNG voice intake integration. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
@@ -337,9 +344,9 @@ Response:
 
 ### `POST /api/n8n/trigger`
 
-Sends the selected paper and reviewer matches to the configured n8n webhook.
-If the webhook is missing or unavailable, the route returns a mock/fallback
-result so the demo flow can continue.
+Sends one `paper.submitted` event to the configured n8n webhook. If the webhook
+is missing or unavailable, the route returns a mock/fallback result so the demo
+flow can continue.
 For n8n test webhook URLs, a `404` usually means the workflow is not actively
 listening; use `Execute workflow` in n8n or switch to the production
 `/webhook/...` URL from an activated workflow.
@@ -349,15 +356,7 @@ Request:
 ```json
 {
   "paperId": "paper-01",
-  "stage": "reviewer-matched",
-  "reviewers": [
-    {
-      "name": "Amara Osei",
-      "institution": "Imperial College London",
-      "speciality": "Clinical retrieval",
-      "fit": 96
-    }
-  ]
+  "event": "paper.submitted"
 }
 ```
 
@@ -366,8 +365,11 @@ Response:
 ```json
 {
   "mode": "live",
+  "event": "paper.submitted",
   "source": "n8n webhook accepted workflow payload",
-  "runId": "00000000-0000-4000-8000-000000000000"
+  "runId": "00000000-0000-4000-8000-000000000000",
+  "orchestrationOwner": "n8n",
+  "nextStage": "Reviewer matched"
 }
 ```
 
@@ -419,8 +421,10 @@ fixes may change framework dependencies shortly before the demo.
 
 ## Roadmap
 
-- Write real Attio records for authors, institutions, papers and review tasks.
-- Promote the n8n trigger from demo payloads to durable workflow run tracking.
+- Build the full n8n workflow nodes for Attio upserts, reviewer matching,
+  outreach/follow-up tasks and stage updates.
+- Promote the n8n trigger from webhook acceptance to durable workflow run
+  tracking.
 - Add SLNG voice recording and transcript parsing.
 - Persist live corpus retrieval results and selected citation traces.
 - Promote Tavily candidates into a reviewed open-access ingestion queue.

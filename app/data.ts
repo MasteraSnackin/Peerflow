@@ -131,25 +131,39 @@ export const workflowSteps: WorkflowStep[] = [
       "Convert author intent into a structured submission brief with paper title, field and contact details.",
   },
   {
-    id: "crm",
-    title: "Validate research CRM workspace",
-    owner: "Attio",
+    id: "submit",
+    title: "Emit paper.submitted",
+    owner: "Peerflow -> n8n",
     detail:
-      "Confirm the Attio workspace is reachable, then prepare the author, institution, paper and review-stage record preview.",
+      "Peerflow sends exactly one webhook event to n8n with the paper, author, CRM record preview and backend callback URL.",
+  },
+  {
+    id: "crm",
+    title: "Create or update CRM records",
+    owner: "n8n -> Attio",
+    detail:
+      "n8n creates or updates the author, institution, paper and follow-up task records in Attio.",
   },
   {
     id: "match",
     title: "Match peer reviewers",
-    owner: "Superlinked",
+    owner: "n8n -> Superlinked",
     detail:
-      "Run semantic matching between the abstract, reviewer expertise and current review load.",
+      "n8n calls Peerflow's reviewer-matching backend or Superlinked directly to rank reviewers.",
   },
   {
-    id: "workflow",
-    title: "Move the review pipeline",
+    id: "outreach",
+    title: "Create reviewer outreach",
     owner: "n8n",
     detail:
-      "Trigger reviewer outreach, create follow-up tasks and move the submission to reviewer matched.",
+      "n8n sends reviewer outreach or creates follow-up tasks for the editorial team.",
+  },
+  {
+    id: "stage",
+    title: "Update paper stage",
+    owner: "n8n",
+    detail:
+      "n8n updates the submission stage to Reviewer matched after matching and outreach are queued.",
   },
   {
     id: "security",

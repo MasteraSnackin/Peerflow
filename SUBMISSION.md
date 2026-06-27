@@ -26,10 +26,10 @@ the payload.
 
 | Track or sponsor | How Peerflow uses it | Current status |
 | --- | --- | --- |
-| Attio Agentic CRM | Validates the workspace and previews author, institution, paper and review-stage records. | Live read-only validation |
-| Superlinked | Reranks reviewer profiles against the selected paper abstract. | Live |
+| Attio Agentic CRM | n8n should create/update author, institution, paper and follow-up task records from the `paper.submitted` payload. | REST API validated; n8n write nodes still needed |
+| Superlinked | n8n should call Peerflow's reviewer-matching backend or Superlinked directly. | Backend route live |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
-| n8n | Receives paper and reviewer payloads for reviewer outreach orchestration. | Configured; needs active production workflow |
+| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Configured; needs active production workflow and downstream nodes |
 | SLNG | Planned voice intake for author submission briefs. | Key configured; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
@@ -42,8 +42,9 @@ the payload.
 4. Ask Aida the patient-treatment question and show refusal.
 5. Search open sources with Tavily and show the candidate source.
 6. Click `Run agent`.
-7. Show Attio validation in the record preview.
-8. Show Superlinked live reviewer scores.
+7. Show Peerflow sending one `paper.submitted` event to n8n.
+8. Explain that n8n owns Attio writes, reviewer matching, outreach/tasks and the
+   `Reviewer matched` stage update.
 9. Show the n8n result in the agent log.
 10. Open the Aikido report from the integration grid.
 
@@ -62,8 +63,8 @@ the payload.
 - OpenAlex: live open-access corpus retrieval; an API key is optional but
   recommended for serious use.
 - Tavily: live supplemental extraction and source discovery.
-- Attio: live read-only workspace validation.
-- Superlinked: live reviewer reranking.
+- Attio: REST API validation is live; n8n write nodes still need to be added.
+- Superlinked: Peerflow reviewer-matching backend is live for n8n to call.
 - Aikido: configured report link.
 - SLNG: configured key; real API endpoint still needed.
 - n8n: production-style webhook path configured locally, but the endpoint still
@@ -75,16 +76,16 @@ the payload.
 If a live provider is slow during judging:
 
 - Aida falls back to local corpus answers if live retrieval or Gemini is slow.
-- Superlinked falls back to local reviewer scores.
+- Reviewer previews fall back to local scores.
 - n8n shows an explicit setup/fallback message with a generated run ID.
-- Attio remains read-only, so the demo cannot accidentally create unwanted CRM
-  records.
+- Peerflow does not create Attio records directly; n8n must own those writes.
 
 ## Final Submission Checklist
 
 - [ ] Activate the n8n workflow and confirm the production webhook returns
       `live`.
-- [ ] Decide whether to enable real Attio record writes.
+- [ ] Add n8n nodes for Attio writes, reviewer matching, outreach/tasks and
+      stage update.
 - [ ] Add the deployed public URL once hosting is available.
 - [ ] Keep `.env.local` out of Git.
 - [ ] Run `npm run lint`.
