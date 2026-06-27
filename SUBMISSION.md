@@ -32,7 +32,7 @@ the payload.
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Configured, but latest deployed webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Importable downstream workflow file contains the orchestration nodes |
 | SLNG | Author records a submission request; Peerflow sends audio to SLNG STT, then extracts title, field, author, institution and summary for the intake record. | Microphone panel and `/api/slng/intake` route implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
-| Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
+| Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation, refusal behaviour and browser voice output for spoken answers. | Live |
 
 ## Demo Flow
 
@@ -78,6 +78,8 @@ the payload.
 - SLNG: microphone voice intake is implemented. The app sends recordings to
   `/api/slng/intake`, which calls SLNG STT when configured and returns the
   structured paper record for the agent log.
+- Voice output: Aida answers and the latest agent log can be read aloud through
+  browser speech synthesis. No extra API key is required.
 - n8n: the app sends the n8n orchestration contract in the payload, but the
   latest deployed production webhook check returned `404`. Activate/publish the
   workflow or correct the production webhook path before presenting it as live.

@@ -14,7 +14,7 @@ reviewer matching and follow-up.
 | Tavily | Open-access source discovery and extraction for Aida's live corpus. | `/api/tavily/discover` searches allowed open-access-friendly domains and extracts source snippets. |
 | SLNG | Author voice intake. In Peerflow, the author records a submission request; `/api/slng/intake` sends the audio to SLNG STT; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The app has a microphone voice-intake panel. The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the voice panel and Attio record preview. |
 | Aikido | Security evidence for the side challenge. | The app links to the configured Aikido audit report from the integration readiness grid. |
-| Aida / Gemini | Corpus-grounded research assistant. | Aida retrieves OpenAlex/Tavily evidence, validates citations and refuses unsupported patient-specific treatment advice. |
+| Aida / Gemini | Corpus-grounded research assistant. | Aida retrieves OpenAlex/Tavily evidence, validates citations, refuses unsupported patient-specific treatment advice and can read answers aloud with browser speech synthesis. |
 
 ## End-to-End Workflow
 
@@ -82,6 +82,9 @@ structured paper record with title, author, institution, field and summary.
 The current app also includes a microphone voice-intake panel that calls
 `/api/slng/intake`; that server route calls SLNG STT when `SLNG_API_KEY` is
 configured and otherwise labels the fallback.
+
+Voice output is separate from SLNG: Aida answers and the latest agent log can be
+read aloud locally by the browser using speech synthesis.
 
 ### Superlinked Matching Proof
 

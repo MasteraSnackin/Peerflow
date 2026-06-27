@@ -110,7 +110,8 @@ infrastructure, but no application data is currently persisted there.
 - Responsibilities: provide the interactive "Run agent" workflow, simulate
   paper intake stages, host the SLNG voice-intake panel, display an Attio-style
   record preview, emit one `paper.submitted` event to n8n and show which
-  downstream actions n8n owns.
+  downstream actions n8n owns. The agent log can also be read aloud through the
+  reusable browser voice-output control.
 - Main technologies: React client component with local component state and
   browser `fetch`.
 - Data owned or transformed: selected paper ID, voice intake result, completed
@@ -121,6 +122,17 @@ infrastructure, but no application data is currently persisted there.
   routes remain available for health checks or n8n workflow calls.
 - Failure modes or operational concerns: the log and stage state are not
   persisted. Refreshing the page loses the run history.
+
+### Voice Output Control
+
+- Responsibilities: read Aida answers and the latest agent log aloud for the
+  demo surface.
+- Main technologies: browser `speechSynthesis` and `SpeechSynthesisUtterance`
+  through the `VoiceOutputButton` client component.
+- Data owned or transformed: visible answer/log text only; no audio is sent to
+  a server.
+- External dependencies: none. Browser support varies, so the control disables
+  itself when speech synthesis is unavailable.
 
 ### Aida Assistant
 
@@ -415,6 +427,8 @@ Limits and risks:
 - External AI, corpus and SIE calls are synchronous request-response operations.
 - SLNG voice transcription is synchronous and depends on browser microphone
   permission plus upstream audio-format support.
+- Browser voice output is local to the user's browser and depends on
+  `speechSynthesis` support.
 - Gemini and corpus failures produce Aida refusals rather than local corpus
   answers. SIE failures still fall back to mock reviewer matches, so production
   monitoring would need clearer error reporting there.

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AidaQuestion, CorpusArticle } from "../data";
+import VoiceOutputButton from "./VoiceOutputButton";
 
 type AidaAssistantProps = {
   questions: AidaQuestion[];
@@ -72,6 +73,14 @@ export default function AidaAssistant({ questions }: AidaAssistantProps) {
         .filter((article): article is CorpusArticle => Boolean(article)),
     [answer.citations, answerArticles],
   );
+  const voiceSummary = [
+    `Question: ${selected.question}.`,
+    `Aida answer: ${answer.answer}`,
+    `Evidence coverage: ${answer.coverage}.`,
+    answer.citations.length > 0
+      ? `Citations: ${answer.citations.join(", ")}.`
+      : "No supporting citations were returned.",
+  ].join(" ");
 
   async function askAida() {
     setIsAsking(true);
@@ -249,15 +258,23 @@ export default function AidaAssistant({ questions }: AidaAssistantProps) {
               {selected.question}
             </h3>
           </div>
-          <span
-            className={`rounded-md px-3 py-2 text-xs font-semibold ${
-              answer.citations.length > 0
-                ? "bg-[#dff6ee] text-[#11775f]"
-                : "bg-[#fff0d8] text-[#8a5b11]"
-            }`}
-          >
-            {answer.confidence}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <VoiceOutputButton
+              className="rounded-md border border-[#c8d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#243632] transition hover:bg-[#f2f5f3] disabled:cursor-not-allowed disabled:text-[#8a9894]"
+              disabled={isAsking}
+              label="Speak answer"
+              text={voiceSummary}
+            />
+            <span
+              className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                answer.citations.length > 0
+                  ? "bg-[#dff6ee] text-[#11775f]"
+                  : "bg-[#fff0d8] text-[#8a5b11]"
+              }`}
+            >
+              {answer.confidence}
+            </span>
+          </div>
         </div>
 
         <p className="mt-4 text-sm leading-7 text-[#40514d]">

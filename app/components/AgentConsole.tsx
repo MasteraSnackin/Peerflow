@@ -9,6 +9,7 @@ import type {
   WorkflowStep,
 } from "../data";
 import VoiceIntake, { type VoiceIntakeResult } from "./VoiceIntake";
+import VoiceOutputButton from "./VoiceOutputButton";
 
 type AgentConsoleProps = {
   papers: Paper[];
@@ -82,6 +83,20 @@ export default function AgentConsole({
   const matchedReviewers = completedSet.has("match")
     ? (liveReviewers ?? reviewers)
     : reviewers.slice(0, 1);
+  const latestLog = log[0];
+  const agentVoiceSummary = latestLog
+    ? [
+        `Peerflow agent status: ${currentStage}.`,
+        `Latest event: ${latestLog.label}.`,
+        latestLog.detail,
+        `n8n status: ${workflowSource}.`,
+      ].join(" ")
+    : [
+        `Peerflow agent is ready for intake.`,
+        `Selected paper: ${selectedPaper.title}.`,
+        `Author: ${selectedPaper.author}.`,
+        `Institution: ${selectedPaper.institution}.`,
+      ].join(" ");
 
   async function submitPaperToN8n(): Promise<N8nTriggerResult> {
     try {
@@ -444,9 +459,16 @@ export default function AgentConsole({
         <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#243632]">Agent log</p>
-            <span className="text-xs font-medium text-[#60706c]">
-              n8n: {workflowSource}
-            </span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <VoiceOutputButton
+                className="rounded-md border border-[#c8d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#243632] transition hover:bg-[#f2f5f3] disabled:cursor-not-allowed disabled:text-[#8a9894]"
+                label="Speak log"
+                text={agentVoiceSummary}
+              />
+              <span className="text-xs font-medium text-[#60706c]">
+                n8n: {workflowSource}
+              </span>
+            </div>
           </div>
           <div className="mt-3 min-h-[156px] divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
             {log.length === 0 ? (
