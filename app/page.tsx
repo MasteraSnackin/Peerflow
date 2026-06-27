@@ -41,7 +41,7 @@ const integrationDefinitions = [
   {
     service: "Tavily",
     keys: ["TAVILY_API_KEY"],
-    purpose: "Search and extract open-access source candidates for Aida.",
+    purpose: "Extract supplemental open-access source text for Aida's live corpus.",
   },
   {
     service: "Aikido",
@@ -53,7 +53,7 @@ const integrationDefinitions = [
   {
     service: "Aida",
     keys: ["AIDA_MODEL_API_KEY or GEMINI_API_KEY"],
-    purpose: "Answer questions only from cited open-access corpus evidence.",
+    purpose: "Answer only from live OpenAlex/Tavily corpus evidence.",
     requiredKeyGroups: [["AIDA_MODEL_API_KEY", "GEMINI_API_KEY"]],
   },
 ];

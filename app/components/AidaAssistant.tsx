@@ -14,6 +14,17 @@ type AidaAnswer = Pick<
 > & {
   mode?: "live" | "mock" | "refused";
   source?: string;
+  query?: string;
+  articles?: CorpusArticle[];
+  providerStatuses?: string[];
+};
+
+type CorpusSearch = {
+  mode: "live" | "mock";
+  source: string;
+  query: string;
+  articles: CorpusArticle[];
+  providerStatuses: string[];
 };
 
 type TavilyDiscovery = {
@@ -36,17 +47,24 @@ export default function AidaAssistant({
   const [selectedId, setSelectedId] = useState(questions[0].id);
   const [liveAnswer, setLiveAnswer] = useState<AidaAnswer | null>(null);
   const [isAsking, setIsAsking] = useState(false);
+  const [corpusPreview, setCorpusPreview] = useState<CorpusSearch | null>(null);
+  const [isRefreshingCorpus, setIsRefreshingCorpus] = useState(false);
   const [discovery, setDiscovery] = useState<TavilyDiscovery | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const selected =
     questions.find((question) => question.id === selectedId) ?? questions[0];
   const answer = liveAnswer ?? selected;
+  const answerArticles = liveAnswer?.articles?.length
+    ? liveAnswer.articles
+    : articles;
   const citedArticles = useMemo(
     () =>
       answer.citations
-        .map((citation) => articles.find((article) => article.id === citation))
+        .map((citation) =>
+          answerArticles.find((article) => article.id === citation),
+        )
         .filter((article): article is CorpusArticle => Boolean(article)),
-    [answer.citations, articles],
+    [answer.citations, answerArticles],
   );
 
   async function askAida() {
@@ -70,6 +88,29 @@ export default function AidaAssistant({
       });
     } finally {
       setIsAsking(false);
+    }
+  }
+
+  async function refreshCorpus() {
+    setIsRefreshingCorpus(true);
+    try {
+      const response = await fetch("/api/corpus/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: selected.id }),
+      });
+      const result = (await response.json()) as CorpusSearch;
+      setCorpusPreview(result);
+    } catch {
+      setCorpusPreview({
+        mode: "mock",
+        source: "Local corpus fallback",
+        query: selected.question,
+        articles,
+        providerStatuses: ["Corpus refresh failed"],
+      });
+    } finally {
+      setIsRefreshingCorpus(false);
     }
   }
 
@@ -112,9 +153,9 @@ export default function AidaAssistant({
           </span>
         </div>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#dce7e3]">
-          Aida answers from open-access papers indexed by Peerflow. It cites
-          the studies it used, reports evidence coverage and refuses questions
-          that are not supported by the corpus.
+          Aida retrieves live open-access metadata and abstracts, cites the
+          studies it used, reports evidence coverage and refuses questions that
+          are not supported by the corpus.
         </p>
 
         <div className="mt-5 grid gap-2">
@@ -130,6 +171,7 @@ export default function AidaAssistant({
               onClick={() => {
                 setSelectedId(question.id);
                 setLiveAnswer(null);
+                setCorpusPreview(null);
                 setDiscovery(null);
               }}
               type="button"
@@ -151,7 +193,23 @@ export default function AidaAssistant({
           <span className="text-xs font-medium text-[#9fb3ad]">
             {liveAnswer
               ? `${liveAnswer.mode ?? "mock"} | ${liveAnswer.source ?? "local corpus"}`
-              : "local corpus trace"}
+              : "live corpus retrieval"}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            className="rounded-md border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:bg-white/5"
+            disabled={isRefreshingCorpus}
+            onClick={refreshCorpus}
+            type="button"
+          >
+            {isRefreshingCorpus ? "Refreshing corpus" : "Refresh corpus"}
+          </button>
+          <span className="max-w-md text-xs font-medium text-[#9fb3ad]">
+            {corpusPreview
+              ? `${corpusPreview.mode} | ${corpusPreview.articles.length} sources`
+              : "OpenAlex plus Tavily when configured"}
           </span>
         </div>
 
@@ -217,10 +275,12 @@ export default function AidaAssistant({
           </div>
           <div className="rounded-lg border border-[#d9e1dd] bg-[#f9fbfa] p-4">
             <p className="text-xs font-semibold uppercase text-[#55716a]">
-              Storage
+              Corpus
             </p>
             <p className="mt-2 text-sm font-semibold text-[#243632]">
-              Metadata and abstracts
+              {liveAnswer?.mode === "live"
+                ? "Live OA abstracts"
+                : "Fallback abstracts"}
             </p>
           </div>
         </div>
@@ -238,18 +298,70 @@ export default function AidaAssistant({
                   <span className="rounded-md bg-[#edf2ef] px-2 py-1 text-xs font-semibold text-[#55716a]">
                     {article.id}
                   </span>
-                  <h4 className="text-sm font-semibold text-[#243632]">
-                    {article.title}
-                  </h4>
+                  {article.url ? (
+                    <a
+                      className="text-sm font-semibold text-[#11775f] underline-offset-4 hover:underline"
+                      href={article.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {article.title}
+                    </a>
+                  ) : (
+                    <h4 className="text-sm font-semibold text-[#243632]">
+                      {article.title}
+                    </h4>
+                  )}
                 </div>
                 <p className="mt-2 text-xs text-[#60706c]">
                   {article.source} | {article.licence} | {article.year}
                 </p>
+                {article.authors ? (
+                  <p className="mt-1 text-xs text-[#60706c]">
+                    {article.authors}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm leading-6 text-[#40514d]">
                   {article.evidence}
                 </p>
               </article>
             ))
+          )}
+        </div>
+
+        <div className="mt-5 rounded-lg border border-[#d9e1dd] bg-[#f9fbfa] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase text-[#55716a]">
+              Live corpus retrieval
+            </p>
+            <span className="text-xs font-medium text-[#60706c]">
+              {liveAnswer?.query
+                ? liveAnswer.query
+                : corpusPreview?.query || "waiting for query"}
+            </span>
+          </div>
+          {corpusPreview?.articles.length ? (
+            <div className="mt-3 grid gap-2">
+              {corpusPreview.articles.map((article) => (
+                <a
+                  className="block rounded-md border border-[#d9e1dd] bg-white px-3 py-2 text-sm font-semibold text-[#243632] transition hover:bg-[#f2f5f3]"
+                  href={article.url ?? "#"}
+                  key={article.id}
+                  rel="noreferrer"
+                  target={article.url ? "_blank" : undefined}
+                >
+                  {article.title}
+                  <span className="mt-1 block text-xs font-medium text-[#60706c]">
+                    {article.source} | {article.licence}
+                  </span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-[#60706c]">
+              Ask Aida to retrieve live evidence for the answer, or refresh the
+              corpus to inspect the open-access sources first.
+            </p>
           )}
         </div>
 

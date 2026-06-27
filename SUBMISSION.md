@@ -13,8 +13,9 @@ workflow problem across authors, reviewers, editors and institutions.
 Peerflow turns that work into an agentic CRM pipeline. A paper is checked as a
 legal open-access source, shaped into an Attio-style research record, matched to
 reviewers with Superlinked, and moved through outreach with n8n. Aida sits on
-top as a corpus-grounded AI assistant: if it cannot cite the studies it used,
-it refuses to answer.
+top as a corpus-grounded AI assistant: it retrieves live open-access evidence,
+cites the studies it used and refuses when the question is outside its safe
+scope.
 
 For the demo, the judge can run the whole workflow end to end. Attio validates
 the workspace, Superlinked reranks reviewer fit live, Aikido security evidence
@@ -27,17 +28,17 @@ the payload.
 | --- | --- | --- |
 | Attio Agentic CRM | Validates the workspace and previews author, institution, paper and review-stage records. | Live read-only validation |
 | Superlinked | Reranks reviewer profiles against the selected paper abstract. | Live |
-| Tavily | Searches and extracts candidate open-access sources for future Aida corpus ingestion. | Live |
+| Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
 | n8n | Receives paper and reviewer payloads for reviewer outreach orchestration. | Configured; needs active production workflow |
 | SLNG | Planned voice intake for author submission briefs. | Key configured; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
-| Aida | Gemini-backed research assistant with citation validation and refusal behaviour. | Live |
+| Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
 
 ## Demo Flow
 
 1. Open the app at `http://localhost:3000/`.
 2. Point out `7/7` configured integrations.
-3. Ask Aida a supported question and show citations.
+3. Ask Aida a supported question and show live citations.
 4. Ask Aida the patient-treatment question and show refusal.
 5. Search open sources with Tavily and show the candidate source.
 6. Click `Run agent`.
@@ -58,7 +59,9 @@ the payload.
 ## Current Live Status
 
 - Aida/Gemini: live.
-- Tavily: live source discovery.
+- OpenAlex: live open-access corpus retrieval; an API key is optional but
+  recommended for serious use.
+- Tavily: live supplemental extraction and source discovery.
 - Attio: live read-only workspace validation.
 - Superlinked: live reviewer reranking.
 - Aikido: configured report link.
@@ -71,7 +74,7 @@ the payload.
 
 If a live provider is slow during judging:
 
-- Aida falls back to local corpus answers.
+- Aida falls back to local corpus answers if live retrieval or Gemini is slow.
 - Superlinked falls back to local reviewer scores.
 - n8n shows an explicit setup/fallback message with a generated run ID.
 - Attio remains read-only, so the demo cannot accidentally create unwanted CRM

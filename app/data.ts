@@ -41,11 +41,14 @@ export type CorpusArticle = {
   licence: string;
   year: string;
   evidence: string;
+  url?: string;
+  authors?: string;
 };
 
 export type AidaQuestion = {
   id: string;
   question: string;
+  searchQuery?: string;
   answer: string;
   confidence: string;
   coverage: string;
@@ -190,9 +193,12 @@ export const corpusArticles: CorpusArticle[] = [
 export const aidaQuestions: AidaQuestion[] = [
   {
     id: "clinical-triage",
-    question: "How could multimodal retrieval reduce clinical review work?",
+    question:
+      "Why is multimodal medical image retrieval useful for clinical practice and research?",
+    searchQuery:
+      "multimodal retrieval clinical evidence review medical images notes trial metadata",
     answer:
-      "Aida found evidence that combining images, notes and trial metadata can reduce manual triage by bringing related clinical evidence into one retrieval workflow. The answer is limited to retrieval support, not diagnosis.",
+      "Aida found evidence that multimodal medical image retrieval can help researchers work with heterogeneous image data across clinical practice and research. The answer is limited to retrieval support, not diagnosis.",
     confidence: "High",
     coverage: "2 cited passages",
     citations: ["C1", "C3"],
@@ -200,6 +206,8 @@ export const aidaQuestions: AidaQuestion[] = [
   {
     id: "model-routing",
     question: "When should we avoid using a frontier model?",
+    searchQuery:
+      "small language model routing document review quality thresholds audit logs",
     answer:
       "The corpus supports using smaller models for routine document review when the task has quality thresholds, audit logs and a feedback loop. Aida would escalate to a stronger model when uncertainty or safety risk rises.",
     confidence: "Medium",
@@ -209,6 +217,8 @@ export const aidaQuestions: AidaQuestion[] = [
   {
     id: "insufficient",
     question: "Which treatment should a patient choose?",
+    searchQuery:
+      "patient specific treatment choice clinical guideline evidence safety",
     answer:
       "Aida cannot answer this from the current corpus. The available papers discuss retrieval, routing and lab-agent memory, but they do not provide patient-specific treatment evidence.",
     confidence: "Insufficient evidence",

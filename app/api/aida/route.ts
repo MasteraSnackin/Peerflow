@@ -1,4 +1,12 @@
-import { aidaQuestions, corpusArticles } from "../../data";
+import {
+  aidaQuestions,
+  type CorpusArticle,
+} from "../../data";
+import {
+  queryForQuestion,
+  retrieveOpenAccessCorpus,
+  staticArticlesForQuestion,
+} from "../../lib/openAccessCorpus";
 
 type GeminiPart = {
   text?: string;
@@ -22,20 +30,43 @@ type AidaLiveAnswer = {
   citations: string[];
   mode: "live" | "mock" | "refused";
   source: string;
+  query: string;
+  articles: CorpusArticle[];
+  providerStatuses?: string[];
 };
 
-function fallbackFor(questionId: string, mode: AidaLiveAnswer["mode"], source: string) {
+function fallbackFor(
+  questionId: string,
+  mode: AidaLiveAnswer["mode"],
+  source: string,
+  articles?: CorpusArticle[],
+  query = "",
+  providerStatuses?: string[],
+) {
   const question =
     aidaQuestions.find((candidate) => candidate.id === questionId) ??
     aidaQuestions[0];
+  const citedArticles = articles ?? staticArticlesForQuestion(question);
+  const usedLiveArticles = Boolean(articles?.length);
 
   return {
-    answer: question.answer,
-    confidence: question.confidence,
-    coverage: question.coverage,
-    citations: question.citations,
+    answer: usedLiveArticles
+      ? "Aida retrieved live open-access evidence for this question, but the model was unavailable or returned an uncited answer. The cited article cards below are shown as evidence, and Aida is not making a new claim beyond those snippets."
+      : question.answer,
+    confidence: usedLiveArticles ? "Evidence retrieved" : question.confidence,
+    coverage: usedLiveArticles
+      ? `${citedArticles.length} live cited ${
+          citedArticles.length === 1 ? "passage" : "passages"
+        }`
+      : question.coverage,
+    citations: usedLiveArticles
+      ? citedArticles.map((article) => article.id)
+      : question.citations,
     mode,
     source,
+    query,
+    articles: citedArticles,
+    providerStatuses,
   } satisfies AidaLiveAnswer;
 }
 
@@ -55,6 +86,61 @@ function parseJsonAnswer(text: string) {
   }
 }
 
+function normaliseCitation(value: unknown, allowedCitations: Set<string>) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return null;
+  }
+
+  const raw = String(value).trim().toUpperCase();
+  const direct = raw.replace(/\s+/g, "");
+  if (allowedCitations.has(direct)) {
+    return direct;
+  }
+
+  const prefixed = direct.match(/\b(OA|TV)[-#]?(\d+)\b/);
+  if (prefixed) {
+    const candidate = `${prefixed[1]}${Number(prefixed[2])}`;
+    return allowedCitations.has(candidate) ? candidate : null;
+  }
+
+  const numeric = direct.match(/^\[?(\d+)\]?$/);
+  if (numeric) {
+    const openAlexCandidate = `OA${Number(numeric[1])}`;
+    const tavilyCandidate = `TV${Number(numeric[1])}`;
+    if (allowedCitations.has(openAlexCandidate)) {
+      return openAlexCandidate;
+    }
+
+    if (allowedCitations.has(tavilyCandidate)) {
+      return tavilyCandidate;
+    }
+  }
+
+  return null;
+}
+
+function extractCitations(
+  parsed: Partial<AidaLiveAnswer> | null,
+  rawText: string,
+  allowedCitations: Set<string>,
+) {
+  const fromJson = Array.isArray(parsed?.citations)
+    ? parsed.citations
+        .map((citation) => normaliseCitation(citation, allowedCitations))
+        .filter((citation): citation is string => Boolean(citation))
+    : [];
+  const fromText = Array.from(rawText.matchAll(/\b(?:OA|TV)\s*[-#]?\d+\b/gi))
+    .map((match) => normaliseCitation(match[0], allowedCitations))
+    .filter((citation): citation is string => Boolean(citation));
+
+  return Array.from(new Set([...fromJson, ...fromText]));
+}
+
+function isPatientSpecificMedicalQuestion(question: string) {
+  const normalised = question.toLowerCase();
+  return normalised.includes("patient") && normalised.includes("treatment");
+}
+
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => null)) as {
     questionId?: string;
@@ -63,26 +149,54 @@ export async function POST(request: Request) {
   const question =
     aidaQuestions.find((candidate) => candidate.id === questionId) ??
     aidaQuestions[0];
+  const query = queryForQuestion(question);
 
-  if (question.citations.length === 0) {
+  if (isPatientSpecificMedicalQuestion(question.question)) {
     return Response.json(
-      fallbackFor(question.id, "refused", "No supporting corpus passages"),
+      fallbackFor(
+        question.id,
+        "refused",
+        "Patient-specific treatment advice is outside Aida's safe scope",
+        [],
+        query,
+      ),
+    );
+  }
+
+  const corpus = await retrieveOpenAccessCorpus(query, {
+    fallbackArticles: staticArticlesForQuestion(question),
+    maxResults: 4,
+  });
+  const citedArticles = corpus.articles;
+
+  if (citedArticles.length === 0) {
+    return Response.json(
+      fallbackFor(
+        question.id,
+        "refused",
+        "No supporting open-access corpus passages",
+        [],
+        corpus.query,
+        corpus.providerStatuses,
+      ),
     );
   }
 
   const apiKey = process.env.AIDA_MODEL_API_KEY ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return Response.json(fallbackFor(question.id, "mock", "Missing Gemini key"));
+    return Response.json(
+      fallbackFor(
+        question.id,
+        "mock",
+        "Missing Gemini key",
+        citedArticles,
+        corpus.query,
+        corpus.providerStatuses,
+      ),
+    );
   }
 
   const model = process.env.AIDA_GEMINI_MODEL ?? "gemini-3.5-flash";
-  const citedArticles = question.citations
-    .map((citation) =>
-      corpusArticles.find((article) => article.id === citation),
-    )
-    .filter((article): article is (typeof corpusArticles)[number] =>
-      Boolean(article),
-    );
   const evidence = citedArticles
     .map(
       (article) =>
@@ -95,7 +209,8 @@ export async function POST(request: Request) {
 Answer the question using only the evidence below. Do not use outside knowledge.
 If the evidence is insufficient, say that Aida cannot answer from the current corpus.
 Return only JSON with these fields: answer, confidence, coverage, citations.
-The citations field must contain only IDs from the evidence, for example ["C1"].
+The citations field must contain at least one exact ID from this list: ${citedArticles.map((article) => article.id).join(", ")}.
+Example citation format: ["${citedArticles[0].id}"].
 
 Question: ${question.question}
 
@@ -127,7 +242,14 @@ ${evidence}`;
 
   if (!response.ok) {
     return Response.json(
-      fallbackFor(question.id, "mock", "Gemini request failed"),
+      fallbackFor(
+        question.id,
+        "mock",
+        "Gemini request failed",
+        citedArticles,
+        corpus.query,
+        corpus.providerStatuses,
+      ),
       { status: 200 },
     );
   }
@@ -139,17 +261,19 @@ ${evidence}`;
       .join("")
       .trim() ?? "";
   const parsed = parseJsonAnswer(text);
-  const allowedCitations = new Set(question.citations);
-  const citations = Array.isArray(parsed?.citations)
-    ? parsed.citations.filter(
-        (citation): citation is string =>
-          typeof citation === "string" && allowedCitations.has(citation),
-      )
-    : [];
+  const allowedCitations = new Set(citedArticles.map((article) => article.id));
+  const citations = extractCitations(parsed, text, allowedCitations);
 
   if (!parsed?.answer || citations.length === 0) {
     return Response.json(
-      fallbackFor(question.id, "mock", "Gemini returned no cited answer"),
+      fallbackFor(
+        question.id,
+        "mock",
+        "Gemini returned no cited answer",
+        citedArticles,
+        corpus.query,
+        corpus.providerStatuses,
+      ),
     );
   }
 
@@ -165,7 +289,13 @@ ${evidence}`;
       ? `${coverage} cited ${coverage === "1" ? "passage" : "passages"}`
       : coverage || `${citations.length} cited passages`,
     citations,
-    mode: "live",
-    source: model,
+    mode: corpus.mode === "live" ? "live" : "mock",
+    source:
+      corpus.mode === "live"
+        ? `${model} + live open-access corpus`
+        : `${model} + local fallback corpus`,
+    query: corpus.query,
+    articles: citedArticles,
+    providerStatuses: corpus.providerStatuses,
   } satisfies AidaLiveAnswer);
 }
