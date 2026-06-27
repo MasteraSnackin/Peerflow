@@ -12,7 +12,7 @@ reviewer matching and follow-up.
 | n8n | Orchestration layer. Peerflow sends one `paper.submitted` event to n8n, then n8n owns Attio writes, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Production webhook returns `200` and starts the workflow. Importable workflow file: `n8n/peerflow-hackathon-orchestration.json`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Peerflow embeds paper title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise, institution and past review topics, then reranks with `ms-marco-MiniLM-L-6-v2`. | The reviewer panel shows top 3 matches with fit scores, such as `Amara Osei, 94% fit`, and explains this is semantic matching rather than keyword search. n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source discovery and extraction for Aida's live corpus. | `/api/tavily/discover` searches allowed open-access-friendly domains and extracts source snippets. |
-| SLNG | Author voice intake. In Peerflow, the author says, "I want to submit a paper about clinical AI retrieval"; SLNG turns that into structured text; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the Attio record preview. Production voice capture is still a planned step. |
+| SLNG | Author voice intake. In Peerflow, the author records a submission request; `/api/slng/intake` sends the audio to SLNG STT; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The app has a microphone voice-intake panel. The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the voice panel and Attio record preview. |
 | Aikido | Security evidence for the side challenge. | The app links to the configured Aikido audit report from the integration readiness grid. |
 | Aida / Gemini | Corpus-grounded research assistant. | Aida retrieves OpenAlex/Tavily evidence, validates citations and refuses unsupported patient-specific treatment advice. |
 
@@ -29,7 +29,7 @@ flowchart LR
   Outreach --> Stage[Reviewer matched]
   Aida --> OpenSources[OpenAlex and Tavily evidence]
   Peerflow --> Aikido[Aikido security report]
-  Peerflow -. planned .-> SLNG[SLNG voice intake]
+  Peerflow --> SLNG[SLNG voice intake]
 ```
 
 Peerflow keeps API keys server-side and only shows configuration state in the
@@ -76,6 +76,9 @@ payload under `orchestration.contract`.
 This screenshot shows the proof judges asked for in the agent log:
 `Voice intake parsed by SLNG`. The Agent Workflow screenshot above shows the
 structured paper record with title, author, institution, field and summary.
+The current app also includes a microphone voice-intake panel that calls
+`/api/slng/intake`; that server route calls SLNG STT when `SLNG_API_KEY` is
+configured and otherwise labels the fallback.
 
 ### Superlinked Matching Proof
 
@@ -109,6 +112,8 @@ workflow and integration readiness together.
   payload so the CRM follow-up contains the top reviewer candidates.
 - The `paper.submitted` payload includes the n8n orchestration contract used by
   the app and workflow JSON.
+- `/api/slng/intake` returned a live SLNG transcript from a WAV voice sample and
+  extracted the structured paper record for `paper-01`.
 - The n8n production webhook returns `200` with `Workflow was started`.
 - `npm run lint` and `npm run build` pass.
 
@@ -120,8 +125,8 @@ workflow and integration readiness together.
 - There is no custom Attio `paper` object yet. Paper stage is carried in the
   orchestration payload rather than stored as a native Attio paper record.
 - Native Attio visual Workflow/Sequence setup is not implemented.
-- SLNG voice capture is represented in the product flow, configuration model
-  and agent log proof, but the production voice-intake endpoint is not
-  implemented yet.
+- SLNG voice capture is implemented through the browser microphone and
+  `/api/slng/intake`; arbitrary author submissions still need stronger field
+  extraction beyond the hackathon demo records.
 - `PEERFLOW_PUBLIC_URL` is still needed for n8n Cloud to call the local
   reviewer-matching backend outside localhost.

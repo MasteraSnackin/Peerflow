@@ -17,10 +17,9 @@ The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
 outreach/task and stage-update nodes. The remaining n8n verification is to
 confirm the signed-in n8n Cloud canvas exactly matches that file. The Aikido
-report URL is shown as
-external security evidence. SLNG is represented in the UI, agent log and
-environment model, but the repository does not yet contain a production
-voice-intake endpoint.
+report URL is shown as external security evidence. SLNG voice intake is
+implemented through a browser microphone panel and `/api/slng/intake`, which
+calls SLNG STT when configured and returns structured paper intake fields.
 
 Peerflow is not a Sci-Hub clone. Its intended boundary is legal open-access
 metadata, abstracts and authorised links.
@@ -36,7 +35,7 @@ metadata, abstracts and authorised links.
 - Use n8n as the orchestration layer for CRM writes, reviewer matching,
   outreach and paper-stage updates.
 - Use Superlinked SIE for semantic reviewer matching when configured.
-- Make future Attio, SLNG and Aikido integrations clear and pluggable via
+- Make Attio, SLNG and Aikido integrations clear and pluggable via
   environment variables.
 - Avoid overstating production readiness: persistence, authentication,
   observability and compliance controls are still limited.
@@ -68,7 +67,7 @@ flowchart LR
   MatchRoute --> SIE[Superlinked SIE]
   AttioRoute --> Attio[Attio CRM]
   TavilyRoute --> Tavily
-  App -. planned .-> SLNG[SLNG voice intake]
+  App --> SLNG[SLNG voice intake]
   App -. planned .-> Aikido[Aikido security report]
   App -. optional scaffold .-> D1[(Cloudflare D1)]
 ```
@@ -496,8 +495,8 @@ Recommended additions:
   workflow JSON for Attio writes, reviewer matching, outreach/follow-up tasks
   and stage updates.
 - Persist n8n workflow run IDs and poll execution status.
-- Add the production SLNG voice capture endpoint behind the existing structured
-  intake proof shown in the agent log.
+- Improve SLNG field extraction for arbitrary author submissions beyond the
+  hackathon demo records.
 - Persist live Aida corpus results and add a legal open-access ingestion/vector
   retrieval pipeline.
 - Persist Aida answer traces, reviewer match decisions and agent workflow logs.

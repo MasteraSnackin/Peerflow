@@ -8,6 +8,7 @@ import type {
   Reviewer,
   WorkflowStep,
 } from "../data";
+import VoiceIntake, { type VoiceIntakeResult } from "./VoiceIntake";
 
 type AgentConsoleProps = {
   papers: Paper[];
@@ -151,6 +152,28 @@ export default function AgentConsole({
     setWorkflowSource("waiting for agent run");
   }
 
+  function handleVoiceIntakeParsed(result: VoiceIntakeResult) {
+    setSelectedPaperId(result.record.paperId);
+    setCompletedIds((current) => {
+      const startingIds = current.length === 0 ? ["source"] : current;
+      return startingIds.includes("voice")
+        ? startingIds
+        : [...startingIds, "voice"];
+    });
+    setLog((current) => [
+      {
+        detail: [
+          `${result.source}.`,
+          `Transcript: "${result.transcript}".`,
+          `Structured paper record: ${result.record.title}; ${result.record.field}; ${result.record.author}; ${result.record.institution}.`,
+        ].join(" "),
+        id: `voice-${Date.now()}`,
+        label: "Voice intake parsed by SLNG",
+      },
+      ...current,
+    ]);
+  }
+
   return (
     <section className="grid gap-5 lg:grid-cols-[1.04fr_0.96fr]">
       <div className="rounded-lg border border-[#d7ded9] bg-white shadow-sm">
@@ -205,7 +228,12 @@ export default function AgentConsole({
 
         <div className="grid gap-5 p-5 xl:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <p className="text-sm font-semibold text-[#243632]">
+            <VoiceIntake
+              disabled={isRunning}
+              onParsed={handleVoiceIntakeParsed}
+              papers={papers}
+            />
+            <p className="mt-5 text-sm font-semibold text-[#243632]">
               Select an intake
             </p>
             <div className="mt-3 space-y-2">

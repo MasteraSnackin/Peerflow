@@ -49,7 +49,7 @@ legal open-access metadata, abstracts and authorised links.
   no-citation, no-claim rule.
 - Tavily Search and Extract for supplemental open-access source discovery.
 - n8n webhook triggering with a single `paper.submitted` event.
-- SLNG readiness and an Aikido security report link for the hackathon side
+- SLNG microphone voice intake and an Aikido security report link for the hackathon side
   challenges.
 - Mock-first demo data so the product works without live credentials.
 - Server-side API routes that keep API keys out of the browser.
@@ -112,7 +112,7 @@ can be plugged in without exposing credentials to the browser.
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
-| SLNG | Voice intake for author submission briefs. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible. Production voice capture is still planned. |
+| SLNG | Voice intake for author submission briefs. | Microphone recording is implemented. `/api/slng/intake` sends audio to SLNG STT when configured, then shows the transcript and structured paper record. |
 | Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 
 ## Installation
@@ -180,6 +180,8 @@ ATTIO_WORKSPACE_ID=
 N8N_WEBHOOK_URL=
 PEERFLOW_PUBLIC_URL=
 SLNG_API_KEY=
+SLNG_STT_URL=https://api.slng.ai/v1/stt/slng/deepgram/nova:3-en
+SLNG_LANGUAGE=en
 SUPERLINKED_ENDPOINT=
 SUPERLINKED_API_KEY=
 SUPERLINKED_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
@@ -209,6 +211,8 @@ Environment variable notes:
 | `N8N_WEBHOOK_URL` | n8n production webhook that receives `paper.submitted`. |
 | `PEERFLOW_PUBLIC_URL` | Optional deployed or tunnelled base URL so n8n Cloud can call Peerflow backend routes. |
 | `SLNG_API_KEY` | SLNG voice intake integration for structured paper intake. |
+| `SLNG_STT_URL` | Optional SLNG speech-to-text endpoint override. |
+| `SLNG_LANGUAGE` | Voice intake language, default `en`. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
 | `SUPERLINKED_EMBEDDING_MODEL` | Semantic embedding model for paper and reviewer profiles. |
@@ -359,6 +363,32 @@ Response:
 }
 ```
 
+### `POST /api/slng/intake`
+
+Receives browser microphone audio as `multipart/form-data`, forwards it to SLNG
+STT when `SLNG_API_KEY` is configured, then extracts a structured paper intake
+record from the transcript.
+
+If recording or SLNG is unavailable, the route returns a labelled fallback for
+the demo phrase: "I want to submit a paper about clinical AI retrieval".
+
+Response:
+
+```json
+{
+  "mode": "live",
+  "source": "SLNG STT via Deepgram Nova 3 English",
+  "transcript": "I want to submit a paper about clinical AI retrieval",
+  "record": {
+    "paperId": "paper-01",
+    "title": "Efficient multimodal retrieval for clinical research triage",
+    "field": "Clinical AI",
+    "author": "Dr Maya Singh",
+    "institution": "UCL AI Centre"
+  }
+}
+```
+
 ### `GET /api/attio/status`
 
 Validates that the configured Attio key can read workspace objects. This is a
@@ -490,7 +520,7 @@ sponsor mapping and final checklist.
 - Import and publish the prepared n8n workflow in n8n Cloud.
 - Promote the n8n trigger from webhook acceptance to durable workflow run
   tracking.
-- Add SLNG voice recording and transcript parsing.
+- Improve SLNG field extraction for arbitrary author submissions.
 - Persist live corpus retrieval results and selected citation traces.
 - Promote Tavily candidates into a reviewed open-access ingestion queue.
 - Add a vector index on top of the live legal open-access corpus.

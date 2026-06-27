@@ -30,7 +30,7 @@ the payload.
 | Superlinked | Semantic reviewer matching. Paper title, abstract and field plus reviewer expertise, institution and past topics are embedded with `all-MiniLM-L6-v2`, then reranked with `ms-marco-MiniLM-L-6-v2`. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Published webhook accepts events; importable downstream workflow file contains the orchestration nodes |
-| SLNG | Author speaks a submission request; SLNG turns it into structured text; Peerflow extracts title, field, author, institution and summary for the intake record. | Key configured; agent log proof shown; endpoint not implemented |
+| SLNG | Author records a submission request; Peerflow sends audio to SLNG STT, then extracts title, field, author, institution and summary for the intake record. | Microphone panel and `/api/slng/intake` route implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
 
@@ -72,9 +72,9 @@ the payload.
   uses `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking so
   reviewer fit is based on research meaning rather than keyword overlap.
 - Aikido: configured report link.
-- SLNG: configured key; the agent log proof is visible as `Voice intake parsed
-  by SLNG`, followed by the structured paper record. Real voice endpoint still
-  needed.
+- SLNG: microphone voice intake is implemented. The app sends recordings to
+  `/api/slng/intake`, which calls SLNG STT when configured and returns the
+  structured paper record for the agent log.
 - n8n: production webhook accepts `paper.submitted` events. The app sends the
   n8n orchestration contract in the payload, and
   `n8n/peerflow-hackathon-orchestration.json` contains downstream Attio,

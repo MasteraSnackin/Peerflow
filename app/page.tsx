@@ -33,7 +33,7 @@ const integrationDefinitions = [
     service: "SLNG",
     keys: ["SLNG_API_KEY"],
     purpose:
-      "Turn spoken author intent into structured paper intake text for Peerflow.",
+      "Record author voice and parse it into a structured paper intake record.",
   },
   {
     service: "Superlinked",
