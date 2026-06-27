@@ -52,6 +52,7 @@ flowchart LR
   App --> AttioRoute[/GET /api/attio/status/]
   App --> N8nRoute[/POST /api/n8n/trigger/]
   App --> TavilyRoute[/POST /api/tavily/discover/]
+  App --> SlngRoute[/POST /api/slng/intake/]
   App --> StaticData[(Static demo data)]
   AidaRoute --> CorpusService[Live corpus service]
   CorpusRoute --> CorpusService
@@ -65,10 +66,11 @@ flowchart LR
   N8N --> Outreach[Reviewer outreach or tasks]
   N8N --> Stage[Reviewer matched stage]
   MatchRoute --> SIE[Superlinked SIE]
+  SlngRoute --> SLNG[SLNG STT]
   AttioRoute --> Attio[Attio CRM]
   TavilyRoute --> Tavily
-  App --> SLNG[SLNG voice intake]
-  App -. planned .-> Aikido[Aikido security report]
+  Browser --> Voice[Microphone voice intake]
+  App --> Aikido[Aikido report link]
   App -. optional scaffold .-> D1[(Cloudflare D1)]
 ```
 
@@ -101,15 +103,17 @@ scaffolded infrastructure, but no application data is currently persisted there.
 ### Agent Console
 
 - Responsibilities: provide the interactive "Run agent" workflow, simulate
-  paper intake stages, display an Attio-style record preview, emit one
-  `paper.submitted` event to n8n and show which downstream actions n8n owns.
+  paper intake stages, host the SLNG voice-intake panel, display an Attio-style
+  record preview, emit one `paper.submitted` event to n8n and show which
+  downstream actions n8n owns.
 - Main technologies: React client component with local component state and
   browser `fetch`.
-- Data owned or transformed: selected paper ID, completed workflow step IDs,
-  n8n trigger status, planned reviewer preview and transient log entries.
-- External dependencies: calls `POST /api/n8n/trigger` during the agent run.
-  The Attio and Superlinked routes remain available for health checks or n8n
-  workflow calls.
+- Data owned or transformed: selected paper ID, voice intake result, completed
+  workflow step IDs, n8n trigger status, planned reviewer preview and transient
+  log entries.
+- External dependencies: calls `POST /api/slng/intake` from the voice panel and
+  `POST /api/n8n/trigger` during the agent run. The Attio and Superlinked
+  routes remain available for health checks or n8n workflow calls.
 - Failure modes or operational concerns: the log and stage state are not
   persisted. Refreshing the page loses the run history.
 
@@ -189,6 +193,24 @@ scaffolded infrastructure, but no application data is currently persisted there.
   Missing or invalid credentials return a mock/fallback status. Live CRM write
   proof is handled by `scripts/seed-attio-peerflow.mjs` and the prepared n8n
   workflow, not by this status route.
+
+### SLNG Intake API Route
+
+- Responsibilities: receive browser microphone audio, forward it to SLNG STT
+  when configured, normalise the transcript and extract a structured paper
+  intake record for the demo queue.
+- Main technologies: Next-style `POST` route, `multipart/form-data`,
+  TypeScript, server-side `fetch` and browser `MediaRecorder` through the
+  `VoiceIntake` client component.
+- Data owned or transformed: audio file upload, transcript text, SLNG model
+  metadata, confidence score and structured fields: `paperId`, `title`,
+  `field`, `author`, `institution` and `summary`.
+- External dependencies: SLNG API via `SLNG_API_KEY`; optional
+  `SLNG_STT_URL`; language defaults to `SLNG_LANGUAGE` or `en`.
+- Failure modes or operational concerns: unsupported audio, missing
+  credentials or upstream failures return a labelled fallback transcript for
+  the hackathon demo phrase. Arbitrary submissions still need stronger field
+  extraction and validation before production use.
 
 ### Attio Seed Script
 
@@ -287,24 +309,28 @@ scaffolded infrastructure, but no application data is currently persisted there.
 
 1. The judge opens the web app and selects one of the static open-access paper
    entries.
-2. The browser runs the local agent sequence in `AgentConsole`.
-3. For each step, the UI marks progress and writes a transient log entry.
-4. On the submission step, the browser posts the selected paper ID to
+2. The author can record a submission request in the SLNG voice-intake panel.
+3. The browser posts microphone audio to `/api/slng/intake`.
+4. The route calls SLNG STT when configured, then returns a transcript and
+   structured paper intake record.
+5. The browser runs the local agent sequence in `AgentConsole`.
+6. For each step, the UI marks progress and writes a transient log entry.
+7. On the submission step, the browser posts the selected paper ID to
    `/api/n8n/trigger`.
-5. The server route builds a `paper.submitted` event with paper metadata, Attio
+8. The server route builds a `paper.submitted` event with paper metadata, Attio
    record previews, an n8n orchestration contract and a reviewer-matching
    callback URL.
-6. n8n receives the event and owns the downstream workflow.
-7. n8n calls Attio to create or update author and institution demo records
+9. n8n receives the event and owns the downstream workflow.
+10. n8n calls Attio to create or update author and institution demo records
    using the same payload shapes proven by `npm run attio:seed`.
-8. n8n calls `/api/superlinked/match-reviewers` through the callback URL in the
+11. n8n calls `/api/superlinked/match-reviewers` through the callback URL in the
    payload, or Superlinked directly, to get top 3 semantic reviewer matches.
-9. n8n creates a reviewer outreach or follow-up task payload that carries those
+12. n8n creates a reviewer outreach or follow-up task payload that carries those
    matches into Attio.
-10. n8n updates the paper stage to `Reviewer matched`.
-11. Current verifiable state: the production webhook accepts the payload and
+13. n8n updates the paper stage to `Reviewer matched`.
+14. Current verifiable state: the production webhook accepts the payload and
     the importable workflow JSON contains these downstream nodes.
-12. The browser renders the n8n trigger status, planned reviewer preview and
+15. The browser renders the n8n trigger status, planned reviewer preview and
     Attio-style record preview.
 
 ### Aida Q&A Flow
@@ -335,10 +361,11 @@ creates transient live corpus records during API calls.
 | Entity | Current fields | Current storage |
 | --- | --- | --- |
 | Paper | `id`, `title`, `source`, `author`, `institution`, `field`, `licence`, `abstract` | `app/data.ts` |
-| Reviewer | `name`, `institution`, `speciality`, `fit`, `availability` | `app/data.ts` |
+| Reviewer | `name`, `institution`, `speciality`, `pastTopics`, `fit`, `availability` | `app/data.ts` |
 | Workflow step | `id`, `title`, `owner`, `detail` | `app/data.ts` |
 | Corpus article | `id`, `title`, `source`, `licence`, `year`, `evidence`, optional `url`, `authors` | `app/data.ts` fallback or live retrieval |
 | Aida question | `id`, `question`, optional `searchQuery`, `answer`, `confidence`, `coverage`, `citations` | `app/data.ts` |
+| Voice intake result | `mode`, `source`, `transcript`, `slng`, `record` | Browser component state and `/api/slng/intake` response |
 | Agent run log | `id`, `label`, `detail` | Browser component state only |
 
 There is no durable application database for the main workflow yet. Drizzle and
@@ -373,6 +400,8 @@ Limits and risks:
 - No persistent state for agent runs, submissions or audit trails.
 - No queueing, retry policy or background workflow runner.
 - External AI, corpus and SIE calls are synchronous request-response operations.
+- SLNG voice transcription is synchronous and depends on browser microphone
+  permission plus upstream audio-format support.
 - Gemini, corpus and SIE failures are hidden behind mock fallbacks, so production
   monitoring would need clearer error reporting.
 - n8n orchestration is triggered during the agent run. The cloud workflow
@@ -401,20 +430,21 @@ display secret values. `.env.local` must remain uncommitted.
 
 ### Client and Server Trust Boundary
 
-The browser can call six server routes:
+The browser can call seven server routes:
 
 - `POST /api/aida`
 - `POST /api/corpus/search`
 - `GET /api/attio/status`
 - `POST /api/n8n/trigger`
+- `POST /api/slng/intake`
 - `POST /api/superlinked/match-reviewers`
 - `POST /api/tavily/discover`
 
-The client controls `questionId` and `paperId`. The server selects papers from
-known static lists, builds the `paper.submitted` payload, constrains corpus
-search to legal open-access-friendly sources, keeps provider credentials
-server-side and treats all client-provided workflow payload fields as demo data
-rather than trusted CRM records.
+The client controls `questionId`, `paperId` and optional microphone audio. The
+server selects papers from known static lists, builds the `paper.submitted`
+payload, constrains corpus search to legal open-access-friendly sources, keeps
+provider credentials server-side and treats all client-provided workflow
+payload fields as demo data rather than trusted CRM records.
 
 `AIKIDO_REPORT_URL` is exposed to the browser as an external report link. It
 should only contain a public or shareable report URL, not a private token or API
@@ -439,9 +469,10 @@ ingested without a clear legal basis and access policy.
 ### Third-Party Provider Risk
 
 Gemini receives the selected question and cited evidence snippets. Superlinked
-SIE receives paper and reviewer profile text. If real author or reviewer data is
-added, the app needs provider review, data minimisation, retention rules and
-clear consent or contractual basis.
+SIE receives paper and reviewer profile text. SLNG receives voice audio for
+transcription. If real author or reviewer data is added, the app needs provider
+review, data minimisation, retention rules and clear consent or contractual
+basis.
 
 ### Auditability and Logging
 
@@ -483,6 +514,8 @@ Recommended additions:
 - Superlinked matching route: demonstrates semantic reviewer matching with
   `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking, while
   keeping local mock scores as a safety net.
+- SLNG voice intake route: proves author speech can become a structured intake
+  record, while retaining a labelled fallback for demo continuity.
 - No active database: reduces implementation complexity for the MVP, but limits
   auditability, collaboration, repeatability and CRM-grade workflow state.
 - Environment-variable integration model: makes partner services pluggable, but
