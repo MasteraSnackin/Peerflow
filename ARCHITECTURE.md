@@ -8,10 +8,11 @@ open-access intake through author follow-up, reviewer matching, workflow
 orchestration and research Q&A.
 
 The current implementation is a polished judge-facing MVP. It uses static demo
-workflow data for the paper queue, reviewers and fallback snippets, while Aida
-retrieves live open-access abstracts through OpenAlex and can supplement them
-with Tavily extraction. Live Gemini, Superlinked SIE, Attio read/write and n8n
-webhook calls are enabled when the required environment variables are present.
+workflow data for the paper queue and reviewers, while Aida retrieves live
+open-access abstracts through OpenAlex and can supplement them with Tavily
+extraction. Aida no longer uses a local fallback corpus. Live Gemini,
+Superlinked SIE, Attio read/write and n8n webhook calls are enabled when the
+required environment variables are present.
 The n8n production webhook is published and accepts `paper.submitted` payloads.
 The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
@@ -59,7 +60,6 @@ flowchart LR
   CorpusRoute --> CorpusService
   CorpusService --> OpenAlex[OpenAlex works API]
   CorpusService --> Tavily[Tavily Search and Extract]
-  CorpusService --> Fallback[(Local fallback snippets)]
   AidaRoute --> Gemini[Gemini API]
   N8nRoute --> N8N[n8n orchestration]
   N8N --> AttioWrite[Attio create or update records]
@@ -78,9 +78,9 @@ flowchart LR
 The system boundary is the Peerflow web app and its server routes. The browser
 only receives rendered UI state and API responses. Credentials are read from
 server environment variables and are not intentionally sent to the client.
-Static demo data is still the source of truth for the CRM workflow queue and
-fallback behaviour. Aida's primary evidence source is now live OpenAlex/Tavily
-retrieval. The n8n webhook currently proves orchestration hand-off; the
+Static demo data is still the source of truth for the CRM workflow queue.
+Aida's only research evidence source is live OpenAlex/Tavily retrieval. The n8n
+webhook currently proves orchestration hand-off; the
 prepared import file defines the intended full workflow. D1 support exists as
 scaffolded infrastructure, but no application data is currently persisted there.
 
@@ -89,8 +89,8 @@ scaffolded infrastructure, but no application data is currently persisted there.
 ### Web App Shell
 
 - Responsibilities: render the main Peerflow demo surface, show integration
-  readiness, and pass mock papers, reviewers, workflow steps and corpus data to
-  client components.
+  readiness, and pass mock papers, reviewers and workflow steps to client
+  components.
 - Main technologies: Next.js app router conventions through vinext, React 19,
   TypeScript and Tailwind CSS.
 - Data owned or transformed: reads static arrays from `app/data.ts` and converts
@@ -125,8 +125,8 @@ scaffolded infrastructure, but no application data is currently persisted there.
   answer, citation trace, evidence coverage and refusal behaviour.
 - Main technologies: React client component with local state and browser
   `fetch`.
-- Data owned or transformed: selected question ID, live or mock answer payload,
-  live corpus previews and matching article citations.
+- Data owned or transformed: selected question ID, live answer or refusal
+  payload, live corpus previews and matching article citations.
 - External dependencies: calls `POST /api/aida` and `POST /api/corpus/search`.
 - Failure modes or operational concerns: live retrieval is request-time only and
   not persisted. Aida's refusal behaviour is implemented for patient-specific
@@ -144,15 +144,15 @@ scaffolded infrastructure, but no application data is currently persisted there.
 - External dependencies: Gemini API via `AIDA_MODEL_API_KEY` or
   `GEMINI_API_KEY`; model name defaults to `gemini-3.5-flash`. Corpus retrieval
   uses OpenAlex and adds Tavily extraction when `TAVILY_API_KEY` is present.
-- Failure modes or operational concerns: model failures return a mock fallback
-  with HTTP 200. This is useful for demos but should be revisited for production
-  monitoring and error handling.
+- Failure modes or operational concerns: model failures return a refusal with
+  any retrieved live evidence and HTTP 200. Aida does not answer from a local
+  fallback corpus.
 
 ### Live Corpus Retrieval
 
 - Responsibilities: search legal open-access sources, reconstruct OpenAlex
-  abstracts, extract compact evidence snippets and provide fallback article
-  cards to Aida and the UI.
+  abstracts, extract compact evidence snippets and provide live article cards
+  to Aida and the UI.
 - Main technologies: TypeScript helper in `app/lib/openAccessCorpus.ts`, server
   routes and server-side `fetch`.
 - Data owned or transformed: query text, OpenAlex works responses, Tavily search
@@ -280,8 +280,8 @@ Current n8n workflow canvas:
 
 ### Static Demo Data
 
-- Responsibilities: provide demo papers, reviewer candidates, workflow steps,
-  fallback corpus articles and supported Aida questions/search queries.
+- Responsibilities: provide demo papers, reviewer candidates, workflow steps
+  and supported Aida questions/search queries.
 - Main technologies: TypeScript exports in `app/data.ts`.
 - Data owned or transformed: paper metadata, abstracts, reviewer profiles,
   workflow copy and corpus evidence snippets.
@@ -355,8 +355,7 @@ Current n8n workflow canvas:
    abstracts.
 6. If OpenAlex returns too little evidence and Tavily is configured, the helper
    searches/extracts from allowed open-access-friendly domains.
-7. If live retrieval fails, the route falls back to the local snippets for the
-   selected question.
+7. If live retrieval fails, Aida refuses instead of using local corpus snippets.
 8. If Gemini is configured, the route sends only the retrieved evidence snippets
    and asks for JSON.
 9. The route accepts the answer only if at least one returned citation is in the
@@ -373,8 +372,8 @@ creates transient live corpus records during API calls.
 | Paper | `id`, `title`, `source`, `author`, `institution`, `field`, `licence`, `abstract` | `app/data.ts` |
 | Reviewer | `name`, `institution`, `speciality`, `pastTopics`, `fit`, `availability` | `app/data.ts` |
 | Workflow step | `id`, `title`, `owner`, `detail` | `app/data.ts` |
-| Corpus article | `id`, `title`, `source`, `licence`, `year`, `evidence`, optional `url`, `authors` | `app/data.ts` fallback or live retrieval |
-| Aida question | `id`, `question`, optional `searchQuery`, `answer`, `confidence`, `coverage`, `citations` | `app/data.ts` |
+| Corpus article | `id`, `title`, `source`, `licence`, `year`, `evidence`, optional `url`, `authors` | Live retrieval only |
+| Aida question | `id`, `question`, optional `searchQuery` | `app/data.ts` |
 | Voice intake result | `mode`, `source`, `transcript`, `slng`, `record` | Browser component state and `/api/slng/intake` response |
 | Agent run log | `id`, `label`, `detail` | Browser component state only |
 
@@ -399,11 +398,10 @@ this document is published before a public URL exists.
 
 ## Scalability and Reliability
 
-The current architecture prioritises demo reliability over scale. Static
-fallback data keeps the app deterministic and allows it to run without external
-services.
-Server routes fall back to mock responses when Gemini or Superlinked cannot be
-used, which makes the live demo less fragile.
+The current architecture prioritises a clear legal/evidence boundary over
+answering every question. Static demo data keeps the agent workflow
+deterministic, but Aida does not use local fallback corpus snippets. If live
+evidence or a cited Gemini answer is unavailable, Aida refuses.
 
 Limits and risks:
 
@@ -412,8 +410,9 @@ Limits and risks:
 - External AI, corpus and SIE calls are synchronous request-response operations.
 - SLNG voice transcription is synchronous and depends on browser microphone
   permission plus upstream audio-format support.
-- Gemini, corpus and SIE failures are hidden behind mock fallbacks, so production
-  monitoring would need clearer error reporting.
+- Gemini and corpus failures produce Aida refusals rather than local corpus
+  answers. SIE failures still fall back to mock reviewer matches, so production
+  monitoring would need clearer error reporting there.
 - n8n orchestration is triggered during the agent run. The cloud workflow
   currently proves webhook acceptance; the prepared import file defines the
   full downstream workflow and the live canvas URL is recorded. Exact node
@@ -471,9 +470,9 @@ reviewer identities or private author communications.
 
 ### Sensitive Data Handling
 
-The demo stores only mock paper metadata, fallback abstracts and fallback
-evidence snippets in the repository. Live corpus retrieval uses legal
-open-access metadata, abstracts and authorised links. Full copyrighted paper
+The demo stores only mock paper metadata and workflow data in the repository.
+Live corpus retrieval uses legal open-access metadata, abstracts and authorised
+links. Full copyrighted paper
 text, paywalled content and private medical or personal data should not be
 ingested without a clear legal basis and access policy.
 
@@ -521,8 +520,9 @@ Recommended additions:
   boundary, but adds backend responsibility for validation and observability.
 - Live corpus retrieval: gives Aida fresh open-access evidence, but it is not
   yet cached, persisted, vector-ranked or human-reviewed.
-- Gemini fallback to mock answer: preserves demo flow during provider issues,
-  but production systems should expose failures more explicitly.
+- No local Aida fallback corpus: improves evidence integrity and judge
+  explainability, but Aida may refuse more often when live providers are slow or
+  unavailable.
 - Superlinked matching route: demonstrates semantic reviewer matching with
   `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking, can
   request a pinned SIE model pool with `SUPERLINKED_ADMIN_TOKEN`, and keeps

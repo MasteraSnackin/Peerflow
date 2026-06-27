@@ -50,7 +50,7 @@ flowchart TB
     Client["Client components<br/>AgentConsole<br/>AidaAssistant<br/>VoiceIntake"]
     Routes["Server API routes<br/>Next-style handlers"]
     CorpusLib["openAccessCorpus.ts<br/>normalised retrieval helper"]
-    DemoData["app/data.ts<br/>static demo queue<br/>fallback corpus<br/>reviewers"]
+    DemoData["app/data.ts<br/>static demo queue<br/>reviewers<br/>Aida question prompts"]
     OptionalDb["Optional D1 and Drizzle scaffold<br/>no active tables yet"]
   end
 
@@ -211,13 +211,11 @@ flowchart TB
   Corpus["openAccessCorpus helper"]
   OpenAlex["OpenAlex works"]
   Tavily["Tavily fallback"]
-  Fallback["Local fallback snippets"]
   Evidence["Allowed evidence set"]
   Gemini["Gemini"]
   CitationCheck{"Returned citations<br/>match evidence set?"}
   Answer["Answer with citations"]
   Refusal["Refusal response"]
-  MockAnswer["Mock fallback answer"]
 
   User --> AidaUI
   AidaUI --> AidaRoute
@@ -226,17 +224,15 @@ flowchart TB
   RefusalGuard -->|"no"| Corpus
   Corpus --> OpenAlex
   Corpus -->|"if needed and configured"| Tavily
-  Corpus -->|"if live retrieval fails"| Fallback
   OpenAlex --> Evidence
   Tavily --> Evidence
-  Fallback --> Evidence
+  Corpus -->|"if no live evidence"| Refusal
   Evidence --> Gemini
   Gemini --> CitationCheck
   CitationCheck -->|"valid"| Answer
-  CitationCheck -->|"invalid or model failure"| MockAnswer
+  CitationCheck -->|"invalid or model failure"| Refusal
   Answer --> AidaUI
   Refusal --> AidaUI
-  MockAnswer --> AidaUI
 ```
 
 ## Sequence: Agent Orchestration Through n8n

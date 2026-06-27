@@ -88,7 +88,8 @@ the payload.
 
 If a live provider is slow during judging:
 
-- Aida falls back to local corpus answers if live retrieval or Gemini is slow.
+- Aida refuses rather than using a local corpus answer if live retrieval or
+  Gemini is slow.
 - Reviewer previews fall back to local scores.
 - n8n shows an explicit setup/fallback message with a generated run ID.
 - Peerflow sends the event once; n8n owns Attio writes, reviewer matching,

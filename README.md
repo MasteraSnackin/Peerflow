@@ -13,10 +13,11 @@ open-access publishers and research communities intake papers, manage authors,
 match reviewers, automate review workflows and answer research questions from
 cited corpus evidence.
 
-The app is built as a judge-facing demo. It can run fully in mock mode, while
-real integrations are enabled through environment variables. The project is
-explicitly not a Sci-Hub clone: it does not bypass paywalls and should only use
-legal open-access metadata, abstracts and authorised links.
+The app is built as a judge-facing demo. The agent workflow remains mock-safe,
+while Aida now relies on live open-access retrieval rather than a local fallback
+corpus. Real integrations are enabled through environment variables. The
+project is explicitly not a Sci-Hub clone: it does not bypass paywalls and
+should only use legal open-access metadata, abstracts and authorised links.
 
 ## Table of Contents
 
@@ -84,7 +85,6 @@ flowchart LR
   AidaAPI --> Gemini[Gemini model]
   AidaAPI --> OpenAlex[OpenAlex works API]
   AidaAPI --> Tavily[Tavily supplemental extract]
-  AidaAPI --> Corpus[Local fallback corpus]
   MatchAPI --> SIE[Superlinked SIE]
   WebApp --> Voice[SLNG voice intake]
   WebApp --> Security[Aikido report]
@@ -119,7 +119,7 @@ sequence diagrams, trust boundary, state, deployment and proof-map views.
 | n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
-| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
+| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. |
 | SLNG | Voice intake for author submission briefs. | Microphone recording is implemented. `/api/slng/intake` sends audio to SLNG STT when configured, then shows the transcript and structured paper record. |
 | Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 
@@ -279,9 +279,10 @@ Suggested demo line:
 
 Runs Aida against live open-access evidence. The route retrieves OpenAlex
 abstracts for the selected question, adds Tavily extraction when configured, and
-asks Gemini to answer using only the cited evidence. Static snippets are used
-only as a fallback. Patient-specific treatment advice is refused before model
-invocation.
+asks Gemini to answer using only the cited evidence. There is no local fallback
+corpus; if live evidence or a cited model answer is unavailable, Aida refuses
+and shows any retrieved live evidence only. Patient-specific treatment advice is
+refused before model invocation.
 
 Request:
 
@@ -298,7 +299,7 @@ Response:
   "answer": "string",
   "confidence": "High",
   "coverage": "1 cited passage",
-  "citations": ["C1"],
+  "citations": ["OA1"],
   "mode": "live",
   "source": "gemini-3.5-flash + live open-access corpus",
   "query": "multimodal retrieval clinical evidence review medical images notes trial metadata",
@@ -336,7 +337,17 @@ Response:
   "mode": "live",
   "source": "OpenAlex returned 4 open-access abstracts",
   "query": "multimodal retrieval clinical evidence review medical images notes trial metadata",
-  "articles": [],
+  "articles": [
+    {
+      "id": "OA1",
+      "title": "string",
+      "source": "OpenAlex live - arXiv",
+      "licence": "Open access",
+      "year": "2026",
+      "evidence": "string",
+      "url": "https://..."
+    }
+  ],
   "providerStatuses": ["OpenAlex returned 4 open-access abstracts"]
 }
 ```

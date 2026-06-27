@@ -4,15 +4,15 @@ import { useMemo, useState } from "react";
 import type { AidaQuestion, CorpusArticle } from "../data";
 
 type AidaAssistantProps = {
-  articles: CorpusArticle[];
   questions: AidaQuestion[];
 };
 
-type AidaAnswer = Pick<
-  AidaQuestion,
-  "answer" | "confidence" | "coverage" | "citations"
-> & {
-  mode?: "live" | "mock" | "refused";
+type AidaAnswer = {
+  answer: string;
+  confidence: string;
+  coverage: string;
+  citations: string[];
+  mode?: "live" | "refused";
   source?: string;
   query?: string;
   articles?: CorpusArticle[];
@@ -20,7 +20,7 @@ type AidaAnswer = Pick<
 };
 
 type CorpusSearch = {
-  mode: "live" | "mock";
+  mode: "live" | "empty";
   source: string;
   query: string;
   articles: CorpusArticle[];
@@ -40,10 +40,18 @@ type TavilyDiscovery = {
   } | null;
 };
 
-export default function AidaAssistant({
-  articles,
-  questions,
-}: AidaAssistantProps) {
+const EMPTY_ANSWER: AidaAnswer = {
+  answer:
+    "Ask Aida to retrieve live open-access evidence before it answers. There is no local fallback corpus.",
+  confidence: "Waiting for live evidence",
+  coverage: "0 live cited passages",
+  citations: [],
+  mode: "refused",
+  source: "No corpus request yet",
+  articles: [],
+};
+
+export default function AidaAssistant({ questions }: AidaAssistantProps) {
   const [selectedId, setSelectedId] = useState(questions[0].id);
   const [liveAnswer, setLiveAnswer] = useState<AidaAnswer | null>(null);
   const [isAsking, setIsAsking] = useState(false);
@@ -53,15 +61,13 @@ export default function AidaAssistant({
   const [isDiscovering, setIsDiscovering] = useState(false);
   const selected =
     questions.find((question) => question.id === selectedId) ?? questions[0];
-  const answer = liveAnswer ?? selected;
-  const answerArticles = liveAnswer?.articles?.length
-    ? liveAnswer.articles
-    : articles;
+  const answer = liveAnswer ?? EMPTY_ANSWER;
+  const answerArticles = liveAnswer?.articles;
   const citedArticles = useMemo(
     () =>
       answer.citations
         .map((citation) =>
-          answerArticles.find((article) => article.id === citation),
+          (answerArticles ?? []).find((article) => article.id === citation),
         )
         .filter((article): article is CorpusArticle => Boolean(article)),
     [answer.citations, answerArticles],
@@ -79,12 +85,14 @@ export default function AidaAssistant({
       setLiveAnswer(result);
     } catch {
       setLiveAnswer({
-        answer: selected.answer,
-        confidence: selected.confidence,
-        coverage: selected.coverage,
-        citations: selected.citations,
-        mode: "mock",
-        source: "Local fallback",
+        answer:
+          "Aida could not reach the live corpus route, so it is refusing instead of using a local fallback corpus.",
+        confidence: "No live evidence",
+        coverage: "0 live cited passages",
+        citations: [],
+        mode: "refused",
+        source: "Aida route request failed",
+        articles: [],
       });
     } finally {
       setIsAsking(false);
@@ -103,10 +111,10 @@ export default function AidaAssistant({
       setCorpusPreview(result);
     } catch {
       setCorpusPreview({
-        mode: "mock",
-        source: "Local corpus fallback",
+        mode: "empty",
+        source: "Corpus refresh failed; no local fallback corpus",
         query: selected.question,
-        articles,
+        articles: [],
         providerStatuses: ["Corpus refresh failed"],
       });
     } finally {
@@ -192,7 +200,7 @@ export default function AidaAssistant({
           </button>
           <span className="text-xs font-medium text-[#9fb3ad]">
             {liveAnswer
-              ? `${liveAnswer.mode ?? "mock"} | ${liveAnswer.source ?? "local corpus"}`
+              ? `${liveAnswer.mode ?? "refused"} | ${liveAnswer.source ?? "live evidence required"}`
               : "live corpus retrieval"}
           </span>
         </div>
@@ -280,7 +288,7 @@ export default function AidaAssistant({
             <p className="mt-2 text-sm font-semibold text-[#243632]">
               {liveAnswer?.mode === "live"
                 ? "Live OA abstracts"
-                : "Fallback abstracts"}
+                : "No local fallback"}
             </p>
           </div>
         </div>

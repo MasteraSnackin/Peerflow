@@ -2,7 +2,6 @@ import AidaAssistant from "./components/AidaAssistant";
 import AgentConsole from "./components/AgentConsole";
 import {
   aidaQuestions,
-  corpusArticles,
   n8nOrchestrationSteps,
   papers,
   reviewers,
@@ -158,7 +157,7 @@ export default function Home() {
           </div>
         </section>
 
-        <AidaAssistant articles={corpusArticles} questions={aidaQuestions} />
+        <AidaAssistant questions={aidaQuestions} />
 
         <AgentConsole
           integrations={integrations}

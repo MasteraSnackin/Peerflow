@@ -1,8 +1,4 @@
-import {
-  corpusArticles,
-  type AidaQuestion,
-  type CorpusArticle,
-} from "../data";
+import { type AidaQuestion, type CorpusArticle } from "../data";
 
 const OPENALEX_WORKS_URL = "https://api.openalex.org/works";
 const TAVILY_API_BASE = "https://api.tavily.com";
@@ -105,7 +101,7 @@ type TavilyExtractResponse = {
 };
 
 export type CorpusSearchResponse = {
-  mode: "live" | "mock";
+  mode: "live" | "empty";
   source: string;
   query: string;
   articles: CorpusArticle[];
@@ -499,29 +495,21 @@ export function queryForQuestion(question: AidaQuestion) {
   return compactText(question.searchQuery ?? question.question, 220);
 }
 
-export function staticArticlesForQuestion(question: AidaQuestion) {
-  return question.citations
-    .map((citation) => corpusArticles.find((article) => article.id === citation))
-    .filter((article): article is CorpusArticle => Boolean(article));
-}
-
 export async function retrieveOpenAccessCorpus(
   query: string,
   options?: {
-    fallbackArticles?: CorpusArticle[];
     maxResults?: number;
   },
 ): Promise<CorpusSearchResponse> {
   const cleanQuery = compactText(query, 220);
   const maxResults = options?.maxResults ?? 4;
-  const fallbackArticles = options?.fallbackArticles ?? corpusArticles.slice(0, 3);
 
   if (!cleanQuery) {
     return {
-      mode: "mock",
-      source: "Local fallback corpus",
+      mode: "empty",
+      source: "Missing corpus query; no local fallback corpus is configured",
       query: cleanQuery,
-      articles: fallbackArticles,
+      articles: [],
       providerStatuses: ["Missing corpus query"],
     };
   }
@@ -555,10 +543,10 @@ export async function retrieveOpenAccessCorpus(
   }
 
   return {
-    mode: "mock",
-    source: `Local fallback corpus; ${providerStatuses.join("; ")}`,
+    mode: "empty",
+    source: `No live open-access evidence retrieved; ${providerStatuses.join("; ")}`,
     query: cleanQuery,
-    articles: fallbackArticles,
+    articles: [],
     providerStatuses,
   };
 }

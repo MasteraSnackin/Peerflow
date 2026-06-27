@@ -5,7 +5,6 @@ import {
 import {
   queryForQuestion,
   retrieveOpenAccessCorpus,
-  staticArticlesForQuestion,
 } from "../../lib/openAccessCorpus";
 
 type GeminiPart = {
@@ -28,44 +27,36 @@ type AidaLiveAnswer = {
   confidence: string;
   coverage: string;
   citations: string[];
-  mode: "live" | "mock" | "refused";
+  mode: "live" | "refused";
   source: string;
   query: string;
   articles: CorpusArticle[];
   providerStatuses?: string[];
 };
 
-function fallbackFor(
-  questionId: string,
-  mode: AidaLiveAnswer["mode"],
+function refusalFor(
   source: string,
-  articles?: CorpusArticle[],
+  articles: CorpusArticle[],
   query = "",
   providerStatuses?: string[],
 ) {
-  const question =
-    aidaQuestions.find((candidate) => candidate.id === questionId) ??
-    aidaQuestions[0];
-  const citedArticles = articles ?? staticArticlesForQuestion(question);
-  const usedLiveArticles = Boolean(articles?.length);
+  const usedLiveArticles = articles.length > 0;
 
   return {
     answer: usedLiveArticles
-      ? "Aida retrieved live open-access evidence for this question, but the model was unavailable or returned an uncited answer. The cited article cards below are shown as evidence, and Aida is not making a new claim beyond those snippets."
-      : question.answer,
-    confidence: usedLiveArticles ? "Evidence retrieved" : question.confidence,
+      ? "Aida retrieved live open-access evidence, but it could not produce a cited answer. The article cards below are shown as evidence, and Aida is not making a new claim beyond those snippets."
+      : "Aida cannot answer because no supporting live open-access evidence was retrieved.",
+    confidence: usedLiveArticles ? "Evidence retrieved" : "No live evidence",
     coverage: usedLiveArticles
-      ? `${citedArticles.length} live cited ${
-          citedArticles.length === 1 ? "passage" : "passages"
+      ? `${articles.length} live cited ${
+          articles.length === 1 ? "passage" : "passages"
         }`
-      : question.coverage,
-    citations: usedLiveArticles
-      ? citedArticles.map((article) => article.id)
-      : question.citations,
-    mode,
+      : "0 live cited passages",
+    citations: usedLiveArticles ? articles.map((article) => article.id) : [],
+    mode: "refused",
     source,
     query,
-    articles: citedArticles,
+    articles,
     providerStatuses,
   } satisfies AidaLiveAnswer;
 }
@@ -153,9 +144,7 @@ export async function POST(request: Request) {
 
   if (isPatientSpecificMedicalQuestion(question.question)) {
     return Response.json(
-      fallbackFor(
-        question.id,
-        "refused",
+      refusalFor(
         "Patient-specific treatment advice is outside Aida's safe scope",
         [],
         query,
@@ -163,17 +152,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const corpus = await retrieveOpenAccessCorpus(query, {
-    fallbackArticles: staticArticlesForQuestion(question),
-    maxResults: 4,
-  });
+  const corpus = await retrieveOpenAccessCorpus(query, { maxResults: 4 });
   const citedArticles = corpus.articles;
 
   if (citedArticles.length === 0) {
     return Response.json(
-      fallbackFor(
-        question.id,
-        "refused",
+      refusalFor(
         "No supporting open-access corpus passages",
         [],
         corpus.query,
@@ -185,9 +169,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.AIDA_MODEL_API_KEY ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return Response.json(
-      fallbackFor(
-        question.id,
-        "mock",
+      refusalFor(
         "Missing Gemini key",
         citedArticles,
         corpus.query,
@@ -242,9 +224,7 @@ ${evidence}`;
 
   if (!response.ok) {
     return Response.json(
-      fallbackFor(
-        question.id,
-        "mock",
+      refusalFor(
         "Gemini request failed",
         citedArticles,
         corpus.query,
@@ -266,9 +246,7 @@ ${evidence}`;
 
   if (!parsed?.answer || citations.length === 0) {
     return Response.json(
-      fallbackFor(
-        question.id,
-        "mock",
+      refusalFor(
         "Gemini returned no cited answer",
         citedArticles,
         corpus.query,
@@ -277,23 +255,22 @@ ${evidence}`;
     );
   }
 
-  const confidence = String(parsed.confidence ?? question.confidence);
+  const confidence = String(parsed.confidence ?? "Evidence supported");
   const coverage = String(parsed.coverage ?? "");
 
   return Response.json({
     answer: String(parsed.answer),
     confidence: /^\d+(\.\d+)?$/.test(confidence)
-      ? question.confidence
+      ? "Evidence supported"
       : confidence,
-    coverage: /^\d+$/.test(coverage)
-      ? `${coverage} cited ${coverage === "1" ? "passage" : "passages"}`
+    coverage: /^\d+(\.\d+)?$/.test(coverage)
+      ? `${citations.length} cited ${
+          citations.length === 1 ? "passage" : "passages"
+        }`
       : coverage || `${citations.length} cited passages`,
     citations,
-    mode: corpus.mode === "live" ? "live" : "mock",
-    source:
-      corpus.mode === "live"
-        ? `${model} + live open-access corpus`
-        : `${model} + local fallback corpus`,
+    mode: "live",
+    source: `${model} + live open-access corpus`,
     query: corpus.query,
     articles: citedArticles,
     providerStatuses: corpus.providerStatuses,

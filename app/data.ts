@@ -55,10 +55,6 @@ export type AidaQuestion = {
   id: string;
   question: string;
   searchQuery?: string;
-  answer: string;
-  confidence: string;
-  coverage: string;
-  citations: string[];
 };
 
 export const papers: Paper[] = [
@@ -222,36 +218,6 @@ export const n8nOrchestrationSteps: N8nOrchestrationStep[] = [
   },
 ];
 
-export const corpusArticles: CorpusArticle[] = [
-  {
-    id: "C1",
-    title: "Efficient multimodal retrieval for clinical research triage",
-    source: "arXiv + OpenAlex",
-    licence: "Open access preprint",
-    year: "2026",
-    evidence:
-      "Links medical images, notes and trial metadata to reduce manual clinical evidence review time.",
-  },
-  {
-    id: "C2",
-    title: "Low-cost model routing for public sector document review",
-    source: "Semantic Scholar",
-    licence: "Author submitted manuscript",
-    year: "2025",
-    evidence:
-      "Shows that smaller language models can clear routine review tasks when routing includes quality thresholds and audit logs.",
-  },
-  {
-    id: "C3",
-    title: "Continual memory for collaborative lab assistants",
-    source: "PubMed Central",
-    licence: "PMC open-access article",
-    year: "2026",
-    evidence:
-      "Evaluates agent memory with provenance, consent and reviewer feedback loops for shared lab work.",
-  },
-];
-
 export const aidaQuestions: AidaQuestion[] = [
   {
     id: "clinical-triage",
@@ -259,32 +225,17 @@ export const aidaQuestions: AidaQuestion[] = [
       "Why is multimodal medical image retrieval useful for clinical practice and research?",
     searchQuery:
       "multimodal retrieval clinical evidence review medical images notes trial metadata",
-    answer:
-      "Aida found evidence that multimodal medical image retrieval can help researchers work with heterogeneous image data across clinical practice and research. The answer is limited to retrieval support, not diagnosis.",
-    confidence: "High",
-    coverage: "2 cited passages",
-    citations: ["C1", "C3"],
   },
   {
     id: "model-routing",
     question: "When should we avoid using a frontier model?",
     searchQuery:
       "small language model routing document review quality thresholds audit logs",
-    answer:
-      "The corpus supports using smaller models for routine document review when the task has quality thresholds, audit logs and a feedback loop. Aida would escalate to a stronger model when uncertainty or safety risk rises.",
-    confidence: "Medium",
-    coverage: "2 cited passages",
-    citations: ["C2", "C3"],
   },
   {
     id: "insufficient",
     question: "Which treatment should a patient choose?",
     searchQuery:
       "patient specific treatment choice clinical guideline evidence safety",
-    answer:
-      "Aida cannot answer this from the current corpus. The available papers discuss retrieval, routing and lab-agent memory, but they do not provide patient-specific treatment evidence.",
-    confidence: "Insufficient evidence",
-    coverage: "0 supporting passages",
-    citations: [],
   },
 ];

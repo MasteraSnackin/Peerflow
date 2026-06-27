@@ -2,7 +2,6 @@ import { aidaQuestions } from "../../../data";
 import {
   queryForQuestion,
   retrieveOpenAccessCorpus,
-  staticArticlesForQuestion,
 } from "../../../lib/openAccessCorpus";
 
 export async function POST(request: Request) {
@@ -16,9 +15,6 @@ export async function POST(request: Request) {
   const query = payload?.query?.trim() || queryForQuestion(question);
 
   return Response.json(
-    await retrieveOpenAccessCorpus(query, {
-      fallbackArticles: staticArticlesForQuestion(question),
-      maxResults: 4,
-    }),
+    await retrieveOpenAccessCorpus(query, { maxResults: 4 }),
   );
 }
