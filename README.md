@@ -42,7 +42,8 @@ legal open-access metadata, abstracts and authorised links.
 - Superlinked SIE reviewer matching using open-source reranking.
 - Aida, a corpus-grounded assistant with a no-citation, no-claim rule.
 - n8n webhook triggering during the agent workflow when configured.
-- SLNG and Aikido readiness indicators for the hackathon side challenges.
+- SLNG readiness and an Aikido security report link for the hackathon side
+  challenges.
 - Mock-first demo data so the product works without live credentials.
 - Server-side API routes that keep API keys out of the browser.
 
@@ -126,7 +127,8 @@ Typical demo flow:
 5. Show Attio workspace validation, Superlinked reviewer matching and the
    Attio-style pipeline state.
 6. Show the n8n workflow trigger result in the agent log.
-7. Explain how SLNG and Aikido fit into the workflow once connected.
+7. Open the Aikido security report from the integration grid.
+8. Explain how SLNG voice intake fits into the workflow once connected.
 
 ## Configuration
 
@@ -167,7 +169,7 @@ Environment variable notes:
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
 | `SUPERLINKED_RERANK_MODEL` | Reviewer reranking model. |
 | `SUPERLINKED_GPU` | SIE GPU lane, default `l4`. |
-| `AIKIDO_REPORT_URL` | Link to repository security report. |
+| `AIKIDO_REPORT_URL` | Link shown in the UI for repository security evidence. |
 | `GEMINI_API_KEY` | Gemini API key for Aida. |
 | `AIDA_MODEL_API_KEY` | Alternative Gemini key name for Aida. |
 | `AIDA_GEMINI_MODEL` | Gemini model used by Aida. |
@@ -280,6 +282,9 @@ Response:
 Sends the selected paper and reviewer matches to the configured n8n webhook.
 If the webhook is missing or unavailable, the route returns a mock/fallback
 result so the demo flow can continue.
+For n8n test webhook URLs, a `404` usually means the workflow is not actively
+listening; use `Execute workflow` in n8n or switch to the production
+`/webhook/...` URL from an activated workflow.
 
 Request:
 

@@ -30,6 +30,8 @@ export type IntegrationStatus = {
   keys: string[];
   configured: boolean;
   statusLabel: string;
+  actionLabel?: string;
+  actionUrl?: string;
 };
 
 export type CorpusArticle = {

@@ -41,6 +41,8 @@ const integrationDefinitions = [
     service: "Aikido",
     keys: ["AIKIDO_REPORT_URL"],
     purpose: "Attach repository security evidence for the side challenge.",
+    actionLabel: "Open report",
+    actionEnvKey: "AIKIDO_REPORT_URL",
   },
   {
     service: "Aida",
@@ -51,19 +53,23 @@ const integrationDefinitions = [
 ];
 
 function getIntegrationStatus() {
-  return integrationDefinitions.map((integration) => ({
-    ...integration,
-    configured: (
+  return integrationDefinitions.map((integration) => {
+    const configured = (
       integration.requiredKeyGroups ??
       integration.keys.map((key) => [key])
-    ).every((group) => group.some((key) => Boolean(process.env[key]))),
-    statusLabel: (
-      integration.requiredKeyGroups ??
-      integration.keys.map((key) => [key])
-    ).every((group) => group.some((key) => Boolean(process.env[key])))
-      ? "Configured"
-      : "Needs setup",
-  }));
+    ).every((group) => group.some((key) => Boolean(process.env[key])));
+    const actionUrl =
+      "actionEnvKey" in integration && integration.actionEnvKey
+        ? process.env[integration.actionEnvKey]
+        : undefined;
+
+    return {
+      ...integration,
+      configured,
+      statusLabel: configured ? "Configured" : "Needs setup",
+      actionUrl: configured ? actionUrl : undefined,
+    };
+  });
 }
 
 export default function Home() {

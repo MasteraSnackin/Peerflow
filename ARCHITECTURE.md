@@ -9,9 +9,10 @@ orchestration and research Q&A.
 
 The current implementation is a polished judge-facing MVP. It runs with static
 mock data by default and enables live Gemini, Superlinked SIE, Attio validation
-and n8n webhook calls when the required environment variables are present. SLNG
-and Aikido are represented in the UI and environment model, but the repository
-does not yet contain production flows for those services.
+and n8n webhook calls when the required environment variables are present. The
+Aikido report URL is shown as external security evidence. SLNG is represented in
+the UI and environment model, but the repository does not yet contain a
+production voice-intake flow.
 
 Peerflow is not a Sci-Hub clone. Its intended boundary is legal open-access
 metadata, abstracts and authorised links.
@@ -155,8 +156,8 @@ infrastructure, but no application data is currently persisted there.
   and generated run ID.
 - External dependencies: `N8N_WEBHOOK_URL`.
 - Failure modes or operational concerns: test webhooks may return `404` unless
-  the n8n workflow is actively listening. The route returns a mock/fallback
-  status rather than blocking the demo.
+  the n8n workflow is actively listening. The route returns a clearer
+  mock/fallback status rather than blocking the demo.
 
 ### Static Demo Data
 
@@ -306,6 +307,10 @@ The client controls `questionId`, `paperId`, n8n stage text and reviewer
 summaries. The server selects papers from known static lists, keeps provider
 credentials server-side and treats all client-provided workflow payload fields
 as demo data rather than trusted CRM records.
+
+`AIKIDO_REPORT_URL` is exposed to the browser as an external report link. It
+should only contain a public or shareable report URL, not a private token or API
+credential.
 
 ### Authentication and Authorisation
 

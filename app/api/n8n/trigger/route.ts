@@ -21,6 +21,18 @@ function fitValue(value: unknown) {
     : 0;
 }
 
+function webhookFailureSource(webhookUrl: string, status: number) {
+  if (status === 404 && webhookUrl.includes("/webhook-test/")) {
+    return "n8n test webhook returned 404; click Execute workflow or use the production /webhook URL";
+  }
+
+  if (status === 404) {
+    return "n8n webhook returned 404; verify the workflow is active and the production URL is correct";
+  }
+
+  return `n8n webhook returned ${status}`;
+}
+
 export async function POST(request: Request) {
   const webhookUrl = process.env.N8N_WEBHOOK_URL;
   const payload = (await request.json().catch(() => null)) as
@@ -72,7 +84,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       return Response.json({
         mode: "mock",
-        source: `n8n webhook returned ${response.status}`,
+        source: webhookFailureSource(webhookUrl, response.status),
         runId,
       });
     }

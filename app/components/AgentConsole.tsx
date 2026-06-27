@@ -438,6 +438,16 @@ export default function AgentConsole({
               <p className="mt-3 break-words font-mono text-[11px] leading-5 text-[#40514d]">
                 {integration.keys.join(", ")}
               </p>
+              {integration.actionUrl ? (
+                <a
+                  className="mt-4 inline-flex rounded-md border border-[#c8d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#243632] transition hover:bg-[#f2f5f3]"
+                  href={integration.actionUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {integration.actionLabel ?? "Open"}
+                </a>
+              ) : null}
             </article>
           ))}
         </div>
