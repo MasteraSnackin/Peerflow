@@ -68,6 +68,7 @@ should only use legal open-access metadata, abstracts and authorised links.
 - TypeScript `5.9.3`
 - Superlinked SIE SDK `0.6.14`
 - Drizzle ORM `0.45.2` with optional D1 scaffolding
+- Vercel production deployment configured through `vercel.json`
 - Cloudflare Worker-compatible Sites build output
 
 ## Architecture Overview
@@ -152,11 +153,18 @@ Open the app:
 http://localhost:3000/
 ```
 
+Production demo:
+
+```text
+https://peerflow-agentic-research-crm.vercel.app/
+```
+
 Useful commands:
 
 ```bash
 npm run lint
 npm run build
+npx next build
 npm run start
 npm run attio:seed
 npm run db:generate
@@ -269,8 +277,11 @@ http://localhost:3000/
 Deployment URL:
 
 ```text
-<ADD DEPLOYED URL>
+https://peerflow-agentic-research-crm.vercel.app/
 ```
+
+Vercel CLI deployment is live. GitHub push-to-deploy is not confirmed until the
+Vercel project is connected to the GitHub repository in the Vercel dashboard.
 
 Suggested demo line:
 
@@ -558,6 +569,7 @@ Current verification commands:
 ```bash
 npm run lint
 npm run build
+npx next build
 ```
 
 Known dependency note: `npm ci` currently reports audit findings inherited from
@@ -586,7 +598,7 @@ sponsor mapping and final checklist.
 - Add a vector index on top of the live legal open-access corpus.
 - Attach Aikido scan evidence inside the app.
 - Add automated tests for API routes and core UI states.
-- Deploy a public demo URL.
+- Connect Vercel to GitHub for automatic push-to-deploy.
 
 ## Contributing
 
@@ -597,7 +609,7 @@ Suggested contribution flow:
 
 1. Create a feature branch.
 2. Make a focused change.
-3. Run `npm run lint` and `npm run build`.
+3. Run `npm run lint`, `npm run build` and `npx next build`.
 4. Open a pull request with a short description and screenshots for UI changes.
 
 Do not include API keys, `.env.local` or other secrets in commits.
