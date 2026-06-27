@@ -132,14 +132,28 @@ function isPatientSpecificMedicalQuestion(question: string) {
   return normalised.includes("patient") && normalised.includes("treatment");
 }
 
+function cleanQuestion(value: unknown) {
+  return typeof value === "string"
+    ? value.replace(/\s+/g, " ").trim().slice(0, 320)
+    : "";
+}
+
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => null)) as {
+    message?: string;
     questionId?: string;
   } | null;
-  const questionId = payload?.questionId ?? aidaQuestions[0].id;
+  const message = cleanQuestion(payload?.message);
   const question =
-    aidaQuestions.find((candidate) => candidate.id === questionId) ??
-    aidaQuestions[0];
+    message.length > 0
+      ? {
+          id: "chat",
+          question: message,
+          searchQuery: message,
+        }
+      : (aidaQuestions.find(
+          (candidate) => candidate.id === payload?.questionId,
+        ) ?? aidaQuestions[0]);
   const query = queryForQuestion(question);
 
   if (isPatientSpecificMedicalQuestion(question.question)) {

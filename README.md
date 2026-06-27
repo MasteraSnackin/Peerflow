@@ -49,7 +49,10 @@ should only use legal open-access metadata, abstracts and authorised links.
   call: `all-MiniLM-L6-v2` embeddings plus `ms-marco-MiniLM-L-6-v2` reranking.
 - Aida, a corpus-grounded assistant with live OpenAlex/Tavily retrieval and a
   no-citation, no-claim rule.
-- Browser voice output for Aida answers and the latest agent workflow log.
+- Aida chat with keyboard input, browser voice dictation and browser voice
+  output for cited answers.
+- Browser voice output for fixed Aida answers and the latest agent workflow
+  log.
 - Tavily Search and Extract for supplemental open-access source discovery.
 - n8n webhook triggering with a single `paper.submitted` event.
 - SLNG microphone voice intake and an Aikido security report link for the hackathon side
@@ -123,7 +126,7 @@ sequence diagrams, trust boundary, state, deployment and proof-map views.
 | n8n | Orchestration layer for `paper.submitted`. | Configured, but latest production webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
-| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. The answer panel can read responses aloud with browser speech synthesis. |
+| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. Aida supports fixed prompt buttons plus free-text chat, browser voice dictation and browser speech output. |
 | SLNG | Voice intake for author submission briefs. | Microphone recording is implemented. `/api/slng/intake` sends audio to SLNG STT when configured, then shows the transcript and structured paper record. |
 | Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 
@@ -175,18 +178,20 @@ Typical demo flow:
 1. Open Peerflow locally.
 2. Ask Aida a supported research question and show the live cited evidence
    trace.
-3. Ask Aida an unsupported question and show the refusal behaviour.
-4. Search open sources with Tavily and show the candidate source.
-5. Click `Run agent`.
-6. Show Peerflow sending one `paper.submitted` event to n8n.
-7. Explain that n8n is intended to own Attio upserts, reviewer matching,
+3. Ask a free-text Aida chat question with the keyboard or browser voice
+   dictation, then play the cited answer aloud.
+4. Ask Aida an unsupported question and show the refusal behaviour.
+5. Search open sources with Tavily and show the candidate source.
+6. Click `Run agent`.
+7. Show Peerflow sending one `paper.submitted` event to n8n.
+8. Explain that n8n is intended to own Attio upserts, reviewer matching,
    outreach/tasks and the `Reviewer matched` stage update. If the webhook still
    returns `404`, show the explicit setup message in the agent log.
-8. Open the live n8n workflow from the app's n8n card, or inspect
+9. Open the live n8n workflow from the app's n8n card, or inspect
    `n8n/peerflow-hackathon-orchestration.json` if judges ask for the
    repository workflow structure.
-9. Open the Aikido security report from the integration grid.
-10. Explain the SLNG proof: author speaks, SLNG turns the request into
+10. Open the Aikido security report from the integration grid.
+11. Explain the SLNG proof: author speaks, SLNG turns the request into
     structured text, and Peerflow extracts title, field, author, institution
     and summary for the paper intake record.
 
@@ -292,18 +297,27 @@ Suggested demo line:
 
 ### `POST /api/aida`
 
-Runs Aida against live open-access evidence. The route retrieves OpenAlex
-abstracts for the selected question, adds Tavily extraction when configured, and
-asks Gemini to answer using only the cited evidence. There is no local fallback
-corpus; if live evidence or a cited model answer is unavailable, Aida refuses
-and shows any retrieved live evidence only. Patient-specific treatment advice is
-refused before model invocation.
+Runs Aida against live open-access evidence. The route accepts either a
+predefined `questionId` or a free-text chat `message`, retrieves OpenAlex
+abstracts, adds Tavily extraction when configured, and asks Gemini to answer
+using only the cited evidence. There is no local fallback corpus; if live
+evidence or a cited model answer is unavailable, Aida refuses and shows any
+retrieved live evidence only. Patient-specific treatment advice is refused
+before model invocation.
 
 Request:
 
 ```json
 {
   "questionId": "clinical-triage"
+}
+```
+
+Free-text chat request:
+
+```json
+{
+  "message": "How can agentic workflows improve peer review?"
 }
 ```
 

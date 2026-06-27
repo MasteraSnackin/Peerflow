@@ -1,3 +1,4 @@
+import AidaChatbot from "./components/AidaChatbot";
 import AidaAssistant from "./components/AidaAssistant";
 import AgentConsole from "./components/AgentConsole";
 import {
@@ -158,6 +159,8 @@ export default function Home() {
         </section>
 
         <AidaAssistant questions={aidaQuestions} />
+
+        <AidaChatbot />
 
         <AgentConsole
           integrations={integrations}

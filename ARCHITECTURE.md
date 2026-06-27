@@ -134,28 +134,34 @@ infrastructure, but no application data is currently persisted there.
 - External dependencies: none. Browser support varies, so the control disables
   itself when speech synthesis is unavailable.
 
-### Aida Assistant
+### Aida Assistant and Chat
 
-- Responsibilities: let a user ask predefined research questions, display the
-  answer, citation trace, evidence coverage and refusal behaviour.
+- Responsibilities: let a user ask predefined research questions or free-text
+  chat questions, display the answer, citation trace, evidence coverage and
+  refusal behaviour, and provide browser speech input/output where supported.
 - Main technologies: React client component with local state and browser
-  `fetch`.
-- Data owned or transformed: selected question ID, live answer or refusal
-  payload, live corpus previews and matching article citations.
+  `fetch`, browser `SpeechRecognition`/`webkitSpeechRecognition` for chat
+  dictation, and browser `speechSynthesis` for spoken answers.
+- Data owned or transformed: selected question ID, typed or dictated chat
+  message, live answer or refusal payload, live corpus previews and matching
+  article citations.
 - External dependencies: calls `POST /api/aida` and `POST /api/corpus/search`.
-- Failure modes or operational concerns: live retrieval is request-time only and
-  not persisted. Aida's refusal behaviour is implemented for patient-specific
-  treatment advice, but a production retrieval system would need stronger
-  evaluation and logging.
+- Failure modes or operational concerns: live retrieval and chat history are
+  request-time only and not persisted. Browser voice dictation and speech
+  output depend on user agent support. Aida's refusal behaviour is implemented
+  for patient-specific treatment advice, but a production retrieval system
+  would need stronger evaluation and logging.
 
 ### Aida API Route
 
-- Responsibilities: retrieve live open-access evidence for a selected question,
-  refuse patient-specific treatment advice before model invocation, call Gemini
-  when configured, and validate returned citations against the allowed set.
+- Responsibilities: retrieve live open-access evidence for a selected question
+  or free-text chat message, refuse patient-specific treatment advice before
+  model invocation, call Gemini when configured, and validate returned citations
+  against the allowed set.
 - Main technologies: Next-style `POST` route, TypeScript, server-side `fetch`.
-- Data owned or transformed: `questionId`, query mappings, live article
-  snippets, Gemini JSON output and final Aida response shape.
+- Data owned or transformed: `questionId`, optional chat `message`, query
+  mappings, live article snippets, Gemini JSON output and final Aida response
+  shape.
 - External dependencies: Gemini API via `AIDA_MODEL_API_KEY` or
   `GEMINI_API_KEY`; model name defaults to `gemini-3.5-flash`. Corpus retrieval
   uses OpenAlex and adds Tavily extraction when `TAVILY_API_KEY` is present.
@@ -395,6 +401,7 @@ creates transient live corpus records during API calls.
 | Workflow step | `id`, `title`, `owner`, `detail` | `app/data.ts` |
 | Corpus article | `id`, `title`, `source`, `licence`, `year`, `evidence`, optional `url`, `authors` | Live retrieval only |
 | Aida question | `id`, `question`, optional `searchQuery` | `app/data.ts` |
+| Aida chat message | `id`, `role`, `text`, optional cited answer payload | Browser component state only |
 | Voice intake result | `mode`, `source`, `transcript`, `slng`, `record` | Browser component state and `/api/slng/intake` response |
 | Agent run log | `id`, `label`, `detail` | Browser component state only |
 
