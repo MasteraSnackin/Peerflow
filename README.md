@@ -1,35 +1,134 @@
 # Peerflow
 
-Peerflow is a hackathon MVP for the Attio Agentic CRM track. It demonstrates a
-legal open-access research workflow: discover a paper, intake the author brief,
-create CRM records, match reviewers, move the review pipeline and attach
-security evidence. It also includes Aida, a corpus-grounded research assistant
-that answers questions only when it can show supporting article evidence.
+Agentic CRM for open-access research publishing.
 
-The current build is a polished judge-facing demo. It runs in mock mode until
-real service credentials are provided through environment variables.
+## Badges
 
-## Pitch
+No CI, coverage or deployment badges are configured yet.
 
-Open-access publishing is not just a content problem. It is a relationship
-problem: authors, reviewers, editors and institutions need coordinated
-follow-up. Peerflow turns that work into an agentic CRM pipeline centred on
-Attio.
+## Description
 
-## Demo Flow
+Peerflow is a hackathon MVP for the Attio Agentic CRM track. It helps
+open-access publishers and research communities intake papers, manage authors,
+match reviewers, automate review workflows and answer research questions from
+cited corpus evidence.
 
-- Check that a paper comes from legitimate open-access sources.
-- Parse author voice or text intake with SLNG.
-- Create author, institution, paper and task records in Attio.
-- Match reviewers with Superlinked semantic similarity.
-- Trigger reviewer outreach and stage updates through n8n.
-- Attach Aikido repository security evidence for the side challenge.
-- Ask Aida research questions and show the cited corpus passages behind the
-  answer.
+The app is built as a judge-facing demo. It can run fully in mock mode, while
+real integrations are enabled through environment variables. The project is
+explicitly not a Sci-Hub clone: it does not bypass paywalls and should only use
+legal open-access metadata, abstracts and authorised links.
 
-## Environment Variables
+## Table of Contents
 
-Create `.env.local` from `.env.example` when real keys are available.
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture Overview](#architecture-overview)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Screenshots or Demo](#screenshots-or-demo)
+- [API Reference](#api-reference)
+- [Tests](#tests)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Licence](#licence)
+- [Contact or Support](#contact-or-support)
+
+## Features
+
+- Paper intake for legitimate open-access research sources.
+- Attio-centred CRM workflow for authors, institutions, papers and review
+  stages.
+- Superlinked SIE reviewer matching using open-source reranking.
+- Aida, a corpus-grounded assistant with a no-citation, no-claim rule.
+- n8n webhook configuration for workflow orchestration.
+- SLNG and Aikido readiness indicators for the hackathon side challenges.
+- Mock-first demo data so the product works without live credentials.
+- Server-side API routes that keep API keys out of the browser.
+
+## Tech Stack
+
+- Node.js `>=22.13.0`
+- Next.js `16.2.6`
+- React `19.2.6`
+- vinext `0.0.50`
+- Vite `8.0.13`
+- Tailwind CSS `4.2.1`
+- TypeScript `5.9.3`
+- Superlinked SIE SDK `0.6.14`
+- Drizzle ORM `0.45.2` with optional D1 scaffolding
+- Cloudflare Worker-compatible Sites build output
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+  User[User or judge] --> WebApp[Peerflow web app]
+  WebApp --> AidaAPI[/Aida API route/]
+  WebApp --> MatchAPI[/Superlinked match route/]
+  WebApp --> Workflow[n8n webhook]
+  AidaAPI --> Gemini[Gemini model]
+  AidaAPI --> Corpus[Open-access corpus snippets]
+  MatchAPI --> SIE[Superlinked SIE]
+  WebApp --> CRM[Attio CRM]
+  WebApp --> Voice[SLNG voice intake]
+  WebApp --> Security[Aikido report]
+```
+
+The web app renders the demo surface and calls server-side API routes for model
+work. Aida answers from cited corpus snippets through the Gemini-backed route,
+while reviewer matching is reranked through Superlinked SIE. n8n, Attio, SLNG
+and Aikido are configured through environment variables so live services can be
+plugged in without exposing credentials to the browser.
+
+## Installation
+
+Clone the repository and install the locked dependencies:
+
+```bash
+git clone git@github.com:MasteraSnackin/Peerflow.git
+cd Peerflow
+npm ci
+```
+
+The project requires Node.js `>=22.13.0`.
+
+## Usage
+
+Start the local development server:
+
+```bash
+npm run dev
+```
+
+Open the app:
+
+```text
+http://localhost:3000/
+```
+
+Useful commands:
+
+```bash
+npm run lint
+npm run build
+npm run start
+npm run db:generate
+```
+
+Typical demo flow:
+
+1. Open Peerflow locally.
+2. Ask Aida a supported research question and show the cited evidence trace.
+3. Ask Aida an unsupported question and show the refusal behaviour.
+4. Click `Run agent`.
+5. Show Superlinked reviewer matching and the Attio-style pipeline state.
+6. Explain how n8n, SLNG and Aikido fit into the workflow once connected.
+
+## Configuration
+
+Create `.env.local` from `.env.example` and fill in only the services you want
+to run live.
 
 ```bash
 ATTIO_API_KEY=
@@ -53,63 +152,162 @@ UNPAYWALL_EMAIL=
 SEMANTIC_SCHOLAR_API_KEY=
 ```
 
-Until keys are present, the UI labels each service as `Mock` and the workflow
-uses the built-in demo data under `app/data.ts`.
+Environment variable notes:
 
-## Aida Hallucination Control
+| Variable | Purpose |
+| --- | --- |
+| `ATTIO_API_KEY` | Future Attio CRM write access. |
+| `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
+| `N8N_WEBHOOK_URL` | n8n webhook for workflow orchestration. |
+| `SLNG_API_KEY` | SLNG voice intake integration. |
+| `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
+| `SUPERLINKED_API_KEY` | SIE authentication key. |
+| `SUPERLINKED_RERANK_MODEL` | Reviewer reranking model. |
+| `SUPERLINKED_GPU` | SIE GPU lane, default `l4`. |
+| `AIKIDO_REPORT_URL` | Link to repository security report. |
+| `GEMINI_API_KEY` | Gemini API key for Aida. |
+| `AIDA_MODEL_API_KEY` | Alternative Gemini key name for Aida. |
+| `AIDA_GEMINI_MODEL` | Gemini model used by Aida. |
+| `AIDA_VECTOR_INDEX_URL` | Future vector index for the research corpus. |
+| `AIDA_EMBEDDING_MODEL` | Future embedding model for corpus retrieval. |
+| `OPENALEX_EMAIL` | Optional OpenAlex polite-pool contact. |
+| `UNPAYWALL_EMAIL` | Optional Unpaywall API contact. |
+| `SEMANTIC_SCHOLAR_API_KEY` | Optional Semantic Scholar API key. |
 
-Aida should be implemented as retrieval-augmented generation rather than a
-free-form chatbot:
+Do not commit `.env.local`. The repository ignores local environment files by
+default.
 
-- retrieve passages from the approved open-access corpus first
-- answer only from retrieved passages
-- show citations and evidence coverage beside every answer
-- refuse when no relevant evidence is found
-- store answer traces so reviewers can audit which studies were used
+## Screenshots or Demo
 
-The current UI demonstrates those behaviours with mock corpus snippets and a
-server-side Gemini route at `app/api/aida/route.ts`. Real implementation hooks
-are exposed through `GEMINI_API_KEY` or `AIDA_MODEL_API_KEY`,
-`AIDA_GEMINI_MODEL`, `AIDA_VECTOR_INDEX_URL` and `AIDA_EMBEDDING_MODEL`.
+Local demo URL:
 
-## Superlinked SIE Reviewer Matching
+```text
+http://localhost:3000/
+```
 
-Peerflow uses the Superlinked Inference Engine for the reviewer-matching side
-challenge through `app/api/superlinked/match-reviewers/route.ts`.
+Deployment URL:
 
-- Model: `cross-encoder/ms-marco-MiniLM-L-6-v2`
-- Task: rerank reviewer profiles against the selected paper
-- Inputs: paper title, field, source, licence and abstract
-- Candidates: reviewer institution, speciality and availability
-- Fallback: local reviewer scores if SIE is cold, slow or unavailable
+```text
+<ADD DEPLOYED URL>
+```
 
-The demo line is:
+Suggested demo line:
 
-> Superlinked reranks reviewers by semantic relevance to the paper, so the
-> agent matches by research meaning rather than keywords.
+> Peerflow turns open-access publishing into an agentic CRM workflow, and Aida
+> answers research questions only when it can cite corpus evidence.
 
-## Open-Access Boundary
+## API Reference
 
-Peerflow is not a Sci-Hub clone and does not bypass paywalls. The intended
-sources are legal open-access indexes and repositories such as arXiv, OpenAlex,
-Semantic Scholar, PubMed Central and Unpaywall. Store metadata, abstracts and
-authorised links unless a paper licence explicitly permits more.
+### `POST /api/aida`
 
-## Local Development
+Runs Aida against the current mock corpus. If a Gemini key is configured, the
+route asks Gemini to answer using only the cited evidence. If the selected
+question has no supporting citations, Aida refuses before calling the model.
+
+Request:
+
+```json
+{
+  "questionId": "clinical-triage"
+}
+```
+
+Response:
+
+```json
+{
+  "answer": "string",
+  "confidence": "High",
+  "coverage": "1 cited passage",
+  "citations": ["C1"],
+  "mode": "live",
+  "source": "gemini-3.5-flash"
+}
+```
+
+### `POST /api/superlinked/match-reviewers`
+
+Reranks reviewer profiles against a selected paper through Superlinked SIE.
+Falls back to local mock reviewer scores if SIE is unavailable, cold or missing
+credentials.
+
+Request:
+
+```json
+{
+  "paperId": "paper-01"
+}
+```
+
+Response:
+
+```json
+{
+  "matches": [
+    {
+      "name": "Amara Osei",
+      "institution": "Imperial College London",
+      "speciality": "Clinical retrieval",
+      "fit": 96,
+      "availability": "2 reviews open"
+    }
+  ],
+  "mode": "live",
+  "source": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+}
+```
+
+## Tests
+
+There is no dedicated test suite yet.
+
+Current verification commands:
 
 ```bash
-npm ci
-npm run dev
+npm run lint
 npm run build
 ```
 
-The dev server normally runs at `http://localhost:3000/`.
+Known dependency note: `npm ci` currently reports audit findings inherited from
+the starter dependency tree. They have not been auto-fixed because forced audit
+fixes may change framework dependencies shortly before the demo.
 
-## Project Shape
+## Roadmap
 
-- `app/page.tsx`: server-rendered shell and environment status.
-- `app/api/superlinked/match-reviewers/route.ts`: SIE reviewer matching.
-- `app/components/AidaAssistant.tsx`: corpus-grounded Q&A demo.
-- `app/components/AgentConsole.tsx`: interactive judge demo.
-- `app/data.ts`: mock papers, reviewers, corpus snippets and workflow steps.
-- `.env.example`: future integration variables.
+- Write real Attio records for authors, institutions, papers and review tasks.
+- Trigger n8n workflow runs from the agent flow.
+- Add SLNG voice recording and transcript parsing.
+- Replace mock corpus snippets with a real vector index.
+- Attach Aikido scan evidence inside the app.
+- Add automated tests for API routes and core UI states.
+- Deploy a public demo URL.
+
+## Contributing
+
+Contributions are welcome once the repository is public and the hackathon
+submission is stable.
+
+Suggested contribution flow:
+
+1. Create a feature branch.
+2. Make a focused change.
+3. Run `npm run lint` and `npm run build`.
+4. Open a pull request with a short description and screenshots for UI changes.
+
+Do not include API keys, `.env.local` or other secrets in commits.
+
+## Licence
+
+`<ADD LICENCE>`
+
+No licence file is currently present in the repository.
+
+## Contact or Support
+
+Repository: `https://github.com/MasteraSnackin/Peerflow`
+
+Maintainer/contact:
+
+```text
+<ADD CONTACT>
+```
