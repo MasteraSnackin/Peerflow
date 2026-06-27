@@ -29,6 +29,7 @@ legal open-access metadata, abstracts and authorised links.
 - [Screenshots or Demo](#screenshots-or-demo)
 - [API Reference](#api-reference)
 - [Tests](#tests)
+- [Submission Guide](#submission-guide)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [Licence](#licence)
@@ -200,6 +201,11 @@ Suggested demo line:
 
 > Peerflow turns open-access publishing into an agentic CRM workflow, and Aida
 > answers research questions only when it can cite corpus evidence.
+
+## Submission Guide
+
+Use [SUBMISSION.md](./SUBMISSION.md) for the 60-second pitch, judge walkthrough,
+sponsor mapping and final checklist.
 
 ## API Reference
 
