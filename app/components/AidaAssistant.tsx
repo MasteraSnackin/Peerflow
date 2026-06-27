@@ -165,9 +165,6 @@ export default function AidaAssistant({ questions }: AidaAssistantProps) {
               Corpus-grounded research answers with visible evidence.
             </h2>
           </div>
-          <span className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-[#dce7e3]">
-            Corpus-only mode
-          </span>
         </div>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#dce7e3]">
           Aida retrieves live open-access metadata and abstracts, cites the
