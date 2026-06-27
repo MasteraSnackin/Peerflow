@@ -10,11 +10,15 @@ orchestration and research Q&A.
 The current implementation is a polished judge-facing MVP. It uses static demo
 workflow data for the paper queue, reviewers and fallback snippets, while Aida
 retrieves live open-access abstracts through OpenAlex and can supplement them
-with Tavily extraction. Live Gemini, Superlinked SIE, Attio validation and n8n
+with Tavily extraction. Live Gemini, Superlinked SIE, Attio read/write and n8n
 webhook calls are enabled when the required environment variables are present.
-The Aikido report URL is shown as external security evidence. SLNG is
-represented in the UI and environment model, but the repository does not yet
-contain a production voice-intake flow.
+The n8n production webhook is published and accepts `paper.submitted` payloads.
+The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
+importable workflow with downstream Attio write, reviewer matching,
+outreach/task and stage-update nodes. The cloud workflow still needs a signed-in
+n8n session to import and publish that file. The Aikido report URL is shown as
+external security evidence. SLNG is represented in the UI and environment
+model, but the repository does not yet contain a production voice-intake flow.
 
 Peerflow is not a Sci-Hub clone. Its intended boundary is legal open-access
 metadata, abstracts and authorised links.
@@ -72,8 +76,9 @@ only receives rendered UI state and API responses. Credentials are read from
 server environment variables and are not intentionally sent to the client.
 Static demo data is still the source of truth for the CRM workflow queue and
 fallback behaviour. Aida's primary evidence source is now live OpenAlex/Tavily
-retrieval. D1 support exists as scaffolded infrastructure, but no application
-data is currently persisted there.
+retrieval. The n8n webhook currently proves orchestration hand-off; the
+prepared import file defines the intended full workflow. D1 support exists as
+scaffolded infrastructure, but no application data is currently persisted there.
 
 ## Component Details
 
@@ -177,8 +182,21 @@ data is currently persisted there.
 - External dependencies: Attio API via `ATTIO_API_KEY` and
   `ATTIO_WORKSPACE_ID`.
 - Failure modes or operational concerns: this route is intentionally read-only.
-  It does not create CRM records yet. Missing or invalid credentials return a
-  mock/fallback status.
+  Missing or invalid credentials return a mock/fallback status. Live CRM write
+  proof is handled by `scripts/seed-attio-peerflow.mjs` and the prepared n8n
+  workflow, not by this status route.
+
+### Attio Seed Script
+
+- Responsibilities: create or update demo companies, people and reviewer
+  outreach tasks in Attio for the three sample Peerflow papers.
+- Main technologies: Node.js script using Attio REST API calls.
+- Data owned or transformed: demo institution domains, demo author emails,
+  company records, person records and follow-up tasks.
+- External dependencies: Attio API via `ATTIO_API_KEY`.
+- Failure modes or operational concerns: the script creates real CRM records in
+  the configured workspace. It uses safe demo identifiers, but should not be run
+  against a production workspace without review.
 
 ### n8n Trigger API Route
 
@@ -191,9 +209,24 @@ data is currently persisted there.
   record preview objects and n8n orchestration instructions.
 - External dependencies: `N8N_WEBHOOK_URL`; optional `PEERFLOW_PUBLIC_URL` so
   n8n Cloud can call Peerflow backend routes from outside localhost.
-- Failure modes or operational concerns: test webhooks may return `404` unless
-  the n8n workflow is actively listening. The route returns a clearer
-  mock/fallback status rather than blocking the demo.
+- Failure modes or operational concerns: the production n8n webhook is
+  published and accepts the payload. The downstream workflow nodes are prepared
+  in `n8n/peerflow-hackathon-orchestration.json`, but still need to be imported
+  and published in n8n Cloud. Test webhooks may return `404` unless the n8n
+  workflow is actively listening. The route returns a clearer mock/fallback
+  status rather than blocking the demo.
+
+### Attio Webhook
+
+- Responsibilities: send Attio `record.created`, `record.updated`,
+  `task.created` and `task.updated` events to n8n.
+- Main technologies: Attio developer webhook configuration.
+- Data owned or transformed: record and task event notifications from Attio.
+- External dependencies: production n8n webhook URL.
+- Failure modes or operational concerns: the current target is the same n8n
+  production path used for Peerflow's `paper.submitted` event. This is adequate
+  for a hackathon demo receiver, but production should split Attio inbound
+  events and Peerflow submission events into separate n8n webhooks.
 
 ### Tavily Discovery API Route
 
@@ -257,13 +290,14 @@ data is currently persisted there.
 5. The server route builds a `paper.submitted` event with paper metadata, Attio
    record previews, n8n required actions and a reviewer-matching callback URL.
 6. n8n receives the event and owns the downstream workflow.
-7. n8n creates or updates Attio author, institution, paper and follow-up task
-   records.
-8. n8n calls `/api/superlinked/match-reviewers` or Superlinked directly to get
-   reviewer matches.
-9. n8n sends reviewer outreach or creates follow-up tasks.
-10. n8n updates the paper stage to `Reviewer matched`.
-11. The browser renders the n8n trigger status, planned reviewer preview and
+7. Current cloud state: the published workflow accepts the webhook payload.
+8. Prepared import workflow: create or update Attio author and institution demo
+   records using the same payload shapes proven by `npm run attio:seed`.
+9. Prepared import workflow: call `/api/superlinked/match-reviewers` through
+   the callback URL in the payload.
+10. Prepared import workflow: create a reviewer outreach task payload.
+11. Prepared import workflow: update the paper stage to `Reviewer matched`.
+12. The browser renders the n8n trigger status, planned reviewer preview and
     Attio-style record preview.
 
 ### Aida Q&A Flow
@@ -334,10 +368,14 @@ Limits and risks:
 - External AI, corpus and SIE calls are synchronous request-response operations.
 - Gemini, corpus and SIE failures are hidden behind mock fallbacks, so production
   monitoring would need clearer error reporting.
-- n8n orchestration is triggered during the agent run, but there is no durable
+- n8n orchestration is triggered during the agent run. The cloud workflow
+  currently proves webhook acceptance; the prepared import file defines the
+  full downstream workflow but still needs to be published. There is no durable
   run-status polling or retry mechanism yet.
-- Attio record creation is not implemented as a write integration. The current
-  app previews the record shape and uses a read-only Attio validation route.
+- Attio record creation is not implemented in the browser route. The app
+  previews the record shape and uses a read-only Attio validation route. Live
+  Attio write proof exists through the seed script and prepared n8n import
+  workflow.
 
 Future scale should introduce a durable store, explicit job status, retries,
 provider timeouts, idempotency keys and persisted audit logs.
@@ -356,13 +394,14 @@ display secret values. `.env.local` must remain uncommitted.
 
 ### Client and Server Trust Boundary
 
-The browser can call five server routes:
+The browser can call six server routes:
 
 - `POST /api/aida`
 - `POST /api/corpus/search`
 - `GET /api/attio/status`
 - `POST /api/n8n/trigger`
 - `POST /api/superlinked/match-reviewers`
+- `POST /api/tavily/discover`
 
 The client controls `questionId` and `paperId`. The server selects papers from
 known static lists, builds the `paper.submitted` payload, constrains corpus

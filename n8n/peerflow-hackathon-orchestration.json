@@ -1,0 +1,301 @@
+{
+  "name": "Peerflow Hackathon Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salesforce-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "41a693a1-1c62-43bb-a8f4-755b10df8df8",
+      "name": "Receive paper.submitted",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        0
+      ],
+      "webhookId": "salesforce-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\n\nif (body.event !== 'paper.submitted') {\n  throw new Error(`Unsupported Peerflow event: ${body.event ?? 'missing'}`);\n}\n\nif (!body.paper?.id) {\n  throw new Error('Peerflow payload is missing paper.id');\n}\n\nreturn [\n  {\n    json: {\n      event: body.event,\n      eventId: body.eventId ?? body.runId,\n      runId: body.runId ?? body.eventId,\n      occurredAt: body.occurredAt,\n      source: body.source ?? 'Peerflow',\n      paper: body.paper,\n      attioRecords: body.attioRecords ?? {},\n      attioTargets: body.attioTargets ?? {},\n      backend: body.orchestration?.backend ?? {},\n      requiredActions: body.orchestration?.requiredActions ?? [],\n      currentStage: body.orchestration?.currentStage ?? body.paper.stage ?? 'Submitted',\n      targetStage: body.orchestration?.targetStage ?? body.paper.targetStage ?? 'Reviewer matched'\n    }\n  }\n];"
+      },
+      "id": "d37e63ad-3772-4c41-8773-4463ee8d9122",
+      "name": "Validate Peerflow event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\nconst institution = input.attioRecords.institution ?? {};\nconst author = input.attioRecords.author ?? {};\nconst paper = input.paper ?? {};\nconst followUpTask = input.attioRecords.followUpTask ?? {};\n\nfunction slugify(value) {\n  return String(value ?? 'peerflow')\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/(^-|-$)/g, '')\n    .slice(0, 64) || 'peerflow';\n}\n\nconst institutionDomain = institution.domain ?? `${slugify(institution.name ?? paper.institution ?? paper.id)}-peerflow.dev`;\nconst authorEmail = author.email ?? `${slugify(author.name ?? paper.author ?? paper.id)}.${paper.id}@example.com`;\n\nreturn [\n  {\n    json: {\n      ...input,\n      attioTargets: {\n        authorObject: input.attioTargets.authorObject ?? 'people',\n        authorMatchingAttribute: input.attioTargets.authorMatchingAttribute ?? 'email_addresses',\n        institutionObject: input.attioTargets.institutionObject ?? 'companies',\n        institutionMatchingAttribute: input.attioTargets.institutionMatchingAttribute ?? 'domains',\n        paperStage: input.attioTargets.paperStage ?? input.targetStage\n      },\n      attioInstitutionPayload: {\n        data: {\n          values: {\n            name: institution.name ?? paper.institution,\n            domains: [institutionDomain],\n            description: `Peerflow demo institution for ${paper.title}`\n          }\n        }\n      },\n      attioAuthorPayload: {\n        data: {\n          values: {\n            name: author.name ?? paper.author,\n            email_addresses: [authorEmail],\n            description: `Peerflow demo author for ${paper.title}. Field: ${paper.field}. Target stage: ${input.targetStage}`\n          }\n        }\n      },\n      attioTaskPayload: {\n        data: {\n          content: [\n            `Peerflow reviewer outreach: ${paper.title}`,\n            `Author: ${author.name ?? paper.author}`,\n            `Institution: ${institution.name ?? paper.institution}`,\n            `Field: ${paper.field}`,\n            `Stage: ${input.targetStage}`,\n            'Next step: contact top reviewer candidates and log response.'\n          ].join('\\n'),\n          format: 'plaintext',\n          deadline_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),\n          is_completed: false,\n          assignees: [],\n          linked_records: []\n        }\n      },\n      reviewerMatchRequest: input.backend.reviewerMatches ?? {\n        method: 'POST',\n        url: '',\n        body: { paperId: paper.id },\n        reachableFromN8nCloud: false\n      },\n      outreachTask: {\n        title: followUpTask.title ?? `Review outreach for ${paper.title}`,\n        status: followUpTask.status ?? 'open',\n        owner: followUpTask.owner ?? 'Editorial desk',\n        paperId: paper.id,\n        stage: input.targetStage\n      }\n    }\n  }\n];"
+      },
+      "id": "ca1813ee-bf75-44c9-9ce5-9b7ca5c58458",
+      "name": "Build orchestration payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.attio.com/v2/objects/{{ $node['Build orchestration payloads'].json.attioTargets.institutionObject }}/records?matching_attribute={{ $node['Build orchestration payloads'].json.attioTargets.institutionMatchingAttribute }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.ATTIO_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $node['Build orchestration payloads'].json.attioInstitutionPayload }}",
+        "options": {}
+      },
+      "id": "3077685f-3e07-4c21-bf2f-51a606c2085f",
+      "name": "Attio upsert institution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -20,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.attio.com/v2/objects/{{ $node['Build orchestration payloads'].json.attioTargets.authorObject }}/records?matching_attribute={{ $node['Build orchestration payloads'].json.attioTargets.authorMatchingAttribute }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.ATTIO_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $node['Build orchestration payloads'].json.attioAuthorPayload }}",
+        "options": {}
+      },
+      "id": "de7dfb39-a642-4f62-a7d5-81c182c4a32b",
+      "name": "Attio upsert author",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $node['Build orchestration payloads'].json.reviewerMatchRequest.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $node['Build orchestration payloads'].json.reviewerMatchRequest.body }}",
+        "options": {}
+      },
+      "id": "0804529c-54ad-42ef-9bbb-b30ce68acfcd",
+      "name": "Match reviewers through Peerflow backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Build orchestration payloads').first().json;\nlet reviewerMatches = [];\nlet reviewerSource = 'Reviewer matching response unavailable';\nlet attioTaskId = null;\nlet attioTaskSource = 'Attio task creation not confirmed';\n\ntry {\n  const reviewerResponse = $('Match reviewers through Peerflow backend').first().json;\n  reviewerMatches = Array.isArray(reviewerResponse.matches) ? reviewerResponse.matches : [];\n  reviewerSource = reviewerResponse.source ?? reviewerSource;\n} catch (error) {\n  reviewerSource = String(error.message ?? error);\n}\n\ntry {\n  const taskResponse = $('Attio create outreach task').first().json;\n  attioTaskId = taskResponse.data?.id?.task_id ?? null;\n  attioTaskSource = attioTaskId ? 'Attio task created' : 'Attio task request attempted';\n} catch (error) {\n  attioTaskSource = String(error.message ?? error);\n}\n\nreturn [\n  {\n    json: {\n      mode: 'live',\n      event: source.event,\n      runId: source.runId,\n      orchestrationOwner: 'n8n',\n      nextStage: source.targetStage,\n      paper: {\n        id: source.paper.id,\n        title: source.paper.title,\n        stage: source.targetStage\n      },\n      attio: {\n        institutionUpsert: 'attempted',\n        authorUpsert: 'attempted',\n        outreachTask: attioTaskSource,\n        outreachTaskId: attioTaskId,\n        variableRequired: 'ATTIO_API_KEY'\n      },\n      reviewerMatching: {\n        source: reviewerSource,\n        matches: reviewerMatches.slice(0, 3)\n      },\n      outreachTask: {\n        ...source.outreachTask,\n        createdBy: 'n8n workflow'\n      },\n      stageUpdate: {\n        from: source.currentStage,\n        to: source.targetStage,\n        updatedBy: 'n8n workflow'\n      }\n    }\n  }\n];"
+      },
+      "id": "184b5552-9f78-4b0d-b938-39c7c38d38f8",
+      "name": "Create outreach and update stage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "1dd02d53-571b-48ed-a431-b4c8bc2f2ea6",
+      "name": "Respond to Peerflow",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.attio.com/v2/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.ATTIO_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $node['Build orchestration payloads'].json.attioTaskPayload }}",
+        "options": {}
+      },
+      "id": "33c87857-b969-44a2-8a78-8e7b7ff8a7f0",
+      "name": "Attio create outreach task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        0
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive paper.submitted": {
+      "main": [
+        [
+          {
+            "node": "Validate Peerflow event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Peerflow event": {
+      "main": [
+        [
+          {
+            "node": "Build orchestration payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build orchestration payloads": {
+      "main": [
+        [
+          {
+            "node": "Attio upsert institution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attio upsert institution": {
+      "main": [
+        [
+          {
+            "node": "Attio upsert author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attio upsert author": {
+      "main": [
+        [
+          {
+            "node": "Match reviewers through Peerflow backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match reviewers through Peerflow backend": {
+      "main": [
+        [
+          {
+            "node": "Attio create outreach task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create outreach and update stage": {
+      "main": [
+        [
+          {
+            "node": "Respond to Peerflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attio create outreach task": {
+      "main": [
+        [
+          {
+            "node": "Create outreach and update stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

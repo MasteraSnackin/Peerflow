@@ -23,12 +23,14 @@ legal open-access metadata, abstracts and authorised links.
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
+- [Live Integration Status](#live-integration-status)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Screenshots or Demo](#screenshots-or-demo)
 - [API Reference](#api-reference)
 - [Tests](#tests)
+- [Sponsor Usage](#sponsor-usage)
 - [Submission Guide](#submission-guide)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -40,6 +42,7 @@ legal open-access metadata, abstracts and authorised links.
 - Paper intake for legitimate open-access research sources.
 - n8n-centred orchestration for Attio CRM records, reviewer matching, outreach
   and stage updates.
+- Importable n8n workflow JSON for the hackathon orchestration path.
 - Superlinked SIE reviewer matching exposed as a backend route n8n can call.
 - Aida, a corpus-grounded assistant with live OpenAlex/Tavily retrieval and a
   no-citation, no-claim rule.
@@ -92,9 +95,23 @@ from cited evidence. For the agent workflow, Peerflow emits one
 `paper.submitted` webhook to n8n. n8n is the orchestration layer: it should
 create or update Attio records, call Peerflow's Superlinked reviewer-matching
 route or Superlinked directly, create outreach/follow-up tasks and update the
-paper stage to `Reviewer matched`. SLNG and Aikido are configured through
-environment variables so live services can be plugged in without exposing
-credentials to the browser.
+paper stage to `Reviewer matched`. The current n8n production webhook is
+published and accepts the event payload; the downstream Attio write, reviewer
+matching, outreach/task and stage-update nodes still need to be completed.
+SLNG and Aikido are configured through environment variables so live services
+can be plugged in without exposing credentials to the browser.
+
+## Live Integration Status
+
+| Service | How Peerflow uses it | Current status |
+| --- | --- | --- |
+| Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
+| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes are in `n8n/peerflow-hackathon-orchestration.json`; the cloud workflow still needs sign-in/import/publish. |
+| Superlinked | Reviewer matching through SIE reranking. | Backend route is ready for n8n to call; it uses SIE when endpoint/key are configured and falls back visibly otherwise. |
+| Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
+| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
+| SLNG | Planned voice intake for author submission briefs. | API key can be configured, but no production voice-intake route is implemented yet. |
+| Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 
 ## Installation
 
@@ -128,6 +145,7 @@ Useful commands:
 npm run lint
 npm run build
 npm run start
+npm run attio:seed
 npm run db:generate
 ```
 
@@ -142,8 +160,10 @@ Typical demo flow:
 6. Show Peerflow sending one `paper.submitted` event to n8n.
 7. Explain that n8n owns Attio upserts, reviewer matching, outreach/tasks and
    the `Reviewer matched` stage update.
-8. Open the Aikido security report from the integration grid.
-9. Explain how SLNG voice intake fits into the workflow once connected.
+8. Open `n8n/peerflow-hackathon-orchestration.json` if judges ask to inspect
+   the workflow structure.
+9. Open the Aikido security report from the integration grid.
+10. Explain how SLNG voice intake fits into the workflow once connected.
 
 ## Configuration
 
@@ -179,7 +199,7 @@ Environment variable notes:
 
 | Variable | Purpose |
 | --- | --- |
-| `ATTIO_API_KEY` | Attio API key for workspace validation and future CRM writes. |
+| `ATTIO_API_KEY` | Attio API key for workspace validation and live demo CRM writes. |
 | `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
 | `N8N_WEBHOOK_URL` | n8n production webhook that receives `paper.submitted`. |
 | `PEERFLOW_PUBLIC_URL` | Optional deployed or tunnelled base URL so n8n Cloud can call Peerflow backend routes. |
@@ -221,11 +241,6 @@ Suggested demo line:
 
 > Peerflow turns open-access publishing into an agentic CRM workflow, and Aida
 > answers research questions only when it can cite corpus evidence.
-
-## Submission Guide
-
-Use [SUBMISSION.md](./SUBMISSION.md) for the 60-second pitch, judge walkthrough,
-sponsor mapping and final checklist.
 
 ## API Reference
 
@@ -342,6 +357,17 @@ Response:
 }
 ```
 
+### `npm run attio:seed`
+
+Creates or updates the live Attio demo CRM sequence through the REST API:
+companies, people and reviewer outreach tasks for the three sample Peerflow
+papers. It uses safe demo email/domain identifiers and reads the Attio key from
+`.env.local`.
+
+The active Attio developer webhook currently sends `record.created`,
+`record.updated`, `task.created` and `task.updated` events to the production
+n8n webhook URL configured in `.env.local`.
+
 ### `POST /api/n8n/trigger`
 
 Sends one `paper.submitted` event to the configured n8n webhook. If the webhook
@@ -350,6 +376,12 @@ flow can continue.
 For n8n test webhook URLs, a `404` usually means the workflow is not actively
 listening; use `Execute workflow` in n8n or switch to the production
 `/webhook/...` URL from an activated workflow.
+
+The published Peerflow n8n webhook currently proves payload acceptance. The
+workflow import file adds downstream nodes for Attio upserts, reviewer matching,
+outreach/follow-up tasks and the final `Reviewer matched` stage update. The
+cloud workflow still needs to be re-imported and published from a signed-in n8n
+session.
 
 Request:
 
@@ -419,10 +451,19 @@ Known dependency note: `npm ci` currently reports audit findings inherited from
 the starter dependency tree. They have not been auto-fixed because forced audit
 fixes may change framework dependencies shortly before the demo.
 
+## Sponsor Usage
+
+Use [SPONSOR_USAGE.md](./SPONSOR_USAGE.md) for the sponsor-by-sponsor mapping,
+screenshots, live evidence and known gaps.
+
+## Submission Guide
+
+Use [SUBMISSION.md](./SUBMISSION.md) for the 60-second pitch, judge walkthrough,
+sponsor mapping and final checklist.
+
 ## Roadmap
 
-- Build the full n8n workflow nodes for Attio upserts, reviewer matching,
-  outreach/follow-up tasks and stage updates.
+- Import and publish the prepared n8n workflow in n8n Cloud.
 - Promote the n8n trigger from webhook acceptance to durable workflow run
   tracking.
 - Add SLNG voice recording and transcript parsing.

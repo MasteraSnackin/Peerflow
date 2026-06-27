@@ -9,6 +9,24 @@ function textValue(value: unknown, fallback = "") {
   return typeof value === "string" ? value.slice(0, 160) : fallback;
 }
 
+function slugify(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 64) || "peerflow"
+  );
+}
+
+function demoAuthorEmail(paper: (typeof papers)[number]) {
+  return `${slugify(paper.author)}.${paper.id}@example.com`;
+}
+
+function demoInstitutionDomain(paper: (typeof papers)[number]) {
+  return `${slugify(paper.institution)}-peerflow.dev`;
+}
+
 function webhookFailureSource(webhookUrl: string, status: number) {
   if (status === 404 && webhookUrl.includes("/webhook-test/")) {
     return "n8n test webhook returned 404; click Execute workflow or use the production /webhook URL";
@@ -83,10 +101,12 @@ export async function POST(request: Request) {
     attioRecords: {
       author: {
         name: paper.author,
+        email: demoAuthorEmail(paper),
         institution: paper.institution,
       },
       institution: {
         name: paper.institution,
+        domain: demoInstitutionDomain(paper),
       },
       paper: {
         externalId: paper.id,
@@ -95,11 +115,20 @@ export async function POST(request: Request) {
         licence: paper.licence,
         source: paper.source,
         stage: "Submitted",
+        targetStage: "Reviewer matched",
       },
       followUpTask: {
         title: `Review outreach for ${paper.title}`,
         status: "open",
+        owner: "Editorial desk",
       },
+    },
+    attioTargets: {
+      authorObject: "people",
+      authorMatchingAttribute: "email_addresses",
+      institutionObject: "companies",
+      institutionMatchingAttribute: "domains",
+      paperStage: "Reviewer matched",
     },
     orchestration: {
       owner: "n8n",
@@ -108,7 +137,7 @@ export async function POST(request: Request) {
       requiredActions: [
         "attio.upsert_author",
         "attio.upsert_institution",
-        "attio.upsert_paper",
+        "attio.create_follow_up_task",
         "superlinked.match_reviewers",
         "reviewer.outreach_or_follow_up_task",
         "paper.stage.update_reviewer_matched",

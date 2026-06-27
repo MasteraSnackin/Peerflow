@@ -21,7 +21,7 @@ const integrationDefinitions = [
   {
     service: "Attio",
     keys: ["ATTIO_API_KEY", "ATTIO_WORKSPACE_ID"],
-    purpose: "n8n creates or updates people, companies, paper records and tasks.",
+    purpose: "n8n creates or updates people, companies and follow-up tasks.",
   },
   {
     service: "n8n",

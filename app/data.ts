@@ -142,7 +142,7 @@ export const workflowSteps: WorkflowStep[] = [
     title: "Create or update CRM records",
     owner: "n8n -> Attio",
     detail:
-      "n8n creates or updates the author, institution, paper and follow-up task records in Attio.",
+      "n8n creates or updates the author, institution and follow-up task records in Attio, while carrying paper stage in the orchestration payload.",
   },
   {
     id: "match",

@@ -6,10 +6,11 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
+    "dev": "NODE_OPTIONS=--dns-result-order=ipv4first vinext dev",
     "build": "vinext build",
-    "start": "vinext start",
+    "start": "NODE_OPTIONS=--dns-result-order=ipv4first vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "attio:seed": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/seed-attio-peerflow.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
