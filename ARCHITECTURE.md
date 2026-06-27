@@ -176,10 +176,13 @@ scaffolded infrastructure, but no application data is currently persisted there.
 - External dependencies: Superlinked SIE endpoint and key. The default
   embedding model is `sentence-transformers/all-MiniLM-L6-v2`; the default
   rerank model is `cross-encoder/ms-marco-MiniLM-L-6-v2`, with GPU lane
-  defaulting to `l4`.
+  defaulting to `l4`. If `SUPERLINKED_ADMIN_TOKEN` is configured, the route
+  requests a `peerflow-reviewer-matching` SIE pool with both models pinned and
+  routes encode/score calls through that pool.
 - Failure modes or operational concerns: missing credentials, cold capacity,
-  timeout or scoring errors return mock reviewer matches. The client labels
-  whether the source was live or mock.
+  model-pinning failure, timeout or scoring errors return mock reviewer matches
+  or fall back to default SIE routing. The client labels whether the source was
+  live or mock.
 
 ### Attio Status API Route
 
@@ -477,10 +480,11 @@ ingested without a clear legal basis and access policy.
 ### Third-Party Provider Risk
 
 Gemini receives the selected question and cited evidence snippets. Superlinked
-SIE receives paper and reviewer profile text. SLNG receives voice audio for
-transcription. If real author or reviewer data is added, the app needs provider
-review, data minimisation, retention rules and clear consent or contractual
-basis.
+SIE receives paper and reviewer profile text. Superlinked's admin token is
+server-only and is used only for model-pool pinning; it must not be sent to the
+browser or stored in Git. SLNG receives voice audio for transcription. If real
+author or reviewer data is added, the app needs provider review, data
+minimisation, retention rules and clear consent or contractual basis.
 
 ### Auditability and Logging
 
@@ -520,8 +524,9 @@ Recommended additions:
 - Gemini fallback to mock answer: preserves demo flow during provider issues,
   but production systems should expose failures more explicitly.
 - Superlinked matching route: demonstrates semantic reviewer matching with
-  `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking, while
-  keeping local mock scores as a safety net.
+  `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking, can
+  request a pinned SIE model pool with `SUPERLINKED_ADMIN_TOKEN`, and keeps
+  local mock scores as a safety net.
 - SLNG voice intake route: proves author speech can become a structured intake
   record, while retaining a labelled fallback for demo continuity.
 - No active database: reduces implementation complexity for the MVP, but limits

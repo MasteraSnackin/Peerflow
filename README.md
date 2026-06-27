@@ -194,9 +194,14 @@ SLNG_STT_URL=https://api.slng.ai/v1/stt/slng/deepgram/nova:3-en
 SLNG_LANGUAGE=en
 SUPERLINKED_ENDPOINT=
 SUPERLINKED_API_KEY=
+SUPERLINKED_ADMIN_TOKEN=
 SUPERLINKED_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 SUPERLINKED_RERANK_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
 SUPERLINKED_GPU=l4
+SUPERLINKED_POOL_NAME=peerflow-reviewer-matching
+SUPERLINKED_PIN_MODELS=true
+SUPERLINKED_PIN_TIMEOUT_MS=10000
+SUPERLINKED_POOL_GPU_COUNT=1
 SUPERLINKED_TIMEOUT_MS=45000
 SUPERLINKED_PROVISION_TIMEOUT_MS=90000
 AIKIDO_REPORT_URL=
@@ -226,9 +231,14 @@ Environment variable notes:
 | `SLNG_LANGUAGE` | Voice intake language, default `en`. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
+| `SUPERLINKED_ADMIN_TOKEN` | Server-only SIE admin token used to request the pinned model pool. |
 | `SUPERLINKED_EMBEDDING_MODEL` | Semantic embedding model for paper and reviewer profiles. |
 | `SUPERLINKED_RERANK_MODEL` | Reviewer reranking model. |
 | `SUPERLINKED_GPU` | SIE GPU lane, default `l4`. |
+| `SUPERLINKED_POOL_NAME` | Optional SIE pool name for model pinning, default `peerflow-reviewer-matching`. |
+| `SUPERLINKED_PIN_MODELS` | Set to `false` to skip the pinned-pool request. |
+| `SUPERLINKED_PIN_TIMEOUT_MS` | Timeout for the model-pinning pool request. |
+| `SUPERLINKED_POOL_GPU_COUNT` | Number of GPUs requested for the pinned pool. |
 | `AIKIDO_REPORT_URL` | Link shown in the UI for repository security evidence. |
 | `GEMINI_API_KEY` | Gemini API key for Aida. |
 | `AIDA_MODEL_API_KEY` | Alternative Gemini key name for Aida. |
@@ -337,8 +347,10 @@ Uses Superlinked SIE for semantic reviewer matching. Peerflow embeds the paper
 title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise,
 institution and past review topics, then reranks candidates with
 `ms-marco-MiniLM-L-6-v2`. This is matching by research meaning, not keyword
-overlap. The route falls back to local mock reviewer scores if SIE is
-unavailable, cold or missing credentials.
+overlap. When `SUPERLINKED_ADMIN_TOKEN` is configured, the route requests a
+named SIE pool with both models pinned and then routes matching through that
+pool. The route falls back to local mock reviewer scores if SIE is unavailable,
+cold or missing credentials.
 
 Request:
 
@@ -367,6 +379,7 @@ Response:
     "rerankModel": "cross-encoder/ms-marco-MiniLM-L-6-v2",
     "embeddingStatus": "embedded 4 profiles into 384-dimensional dense vectors",
     "matchingMethod": "Superlinked semantic embedding plus reranking, not keyword search",
+    "modelPinning": "requested pinned pool peerflow-reviewer-matching for sentence-transformers/all-MiniLM-L6-v2 and cross-encoder/ms-marco-MiniLM-L-6-v2",
     "profileInputs": "paper title + abstract + field vs reviewer expertise + institution + past review topics",
     "embeddingDimensions": 384
   },

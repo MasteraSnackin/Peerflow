@@ -27,7 +27,7 @@ the payload.
 | Track or sponsor | How Peerflow uses it | Current status |
 | --- | --- | --- |
 | Attio Agentic CRM | Peerflow creates/updates demo author, institution and follow-up task records through the Attio REST API; n8n import workflow includes Attio write nodes for the live orchestration path. | REST API read/write live; native Attio visual workflow not implemented |
-| Superlinked | Semantic reviewer matching. Paper title, abstract and field plus reviewer expertise, institution and past topics are embedded with `all-MiniLM-L6-v2`, then reranked with `ms-marco-MiniLM-L-6-v2`. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
+| Superlinked | Semantic reviewer matching. Paper title, abstract and field plus reviewer expertise, institution and past topics are embedded with `all-MiniLM-L6-v2`, then reranked with `ms-marco-MiniLM-L-6-v2`. With the server-only admin token, Peerflow requests a pinned SIE model pool before matching. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Published webhook accepts events; importable downstream workflow file contains the orchestration nodes |
 | SLNG | Author records a submission request; Peerflow sends audio to SLNG STT, then extracts title, field, author, institution and summary for the intake record. | Microphone panel and `/api/slng/intake` route implemented |
@@ -70,7 +70,8 @@ the payload.
   is active and points to the production n8n webhook.
 - Superlinked: Peerflow reviewer-matching backend is live for n8n to call. It
   uses `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking so
-  reviewer fit is based on research meaning rather than keyword overlap.
+  reviewer fit is based on research meaning rather than keyword overlap. The
+  admin token is stored server-side for SIE model-pool pinning.
 - Aikido: configured report link.
 - SLNG: microphone voice intake is implemented. The app sends recordings to
   `/api/slng/intake`, which calls SLNG STT when configured and returns the

@@ -326,12 +326,17 @@ sequenceDiagram
   autonumber
   participant Caller as n8n or Peerflow UI
   participant Route as reviewer match route
+  participant Pool as SIE pinned pool
   participant Data as app/data.ts
   participant SIE as Superlinked SIE
 
   Caller->>Route: POST paperId
   Route->>Data: Load paper and reviewer candidates
   Data-->>Route: Paper abstract, field, reviewer profiles
+  opt SUPERLINKED_ADMIN_TOKEN is configured
+    Route->>Pool: Request peerflow-reviewer-matching pool with pinned models
+    Pool-->>Route: Pool routing path or fallback to default GPU
+  end
   Route->>SIE: Embed paper title, abstract and field
   Route->>SIE: Embed reviewer expertise, institution and past topics
   SIE-->>Route: Similarity scores

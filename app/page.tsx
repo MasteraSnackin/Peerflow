@@ -40,9 +40,18 @@ const integrationDefinitions = [
   },
   {
     service: "Superlinked",
-    keys: ["SUPERLINKED_ENDPOINT", "SUPERLINKED_API_KEY"],
+    keys: [
+      "SUPERLINKED_ENDPOINT",
+      "SUPERLINKED_API_KEY",
+      "SUPERLINKED_ADMIN_TOKEN",
+      "SUPERLINKED_POOL_NAME",
+    ],
     purpose:
-      "Embed paper and reviewer profiles, then rerank reviewer fit by meaning.",
+      "Embed paper and reviewer profiles, rerank reviewer fit by meaning and pin models when the admin token is configured.",
+    requiredKeyGroups: [
+      ["SUPERLINKED_ENDPOINT"],
+      ["SUPERLINKED_API_KEY", "SUPERLINKED_ADMIN_TOKEN"],
+    ],
   },
   {
     service: "Tavily",

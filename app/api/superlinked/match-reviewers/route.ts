@@ -18,6 +18,7 @@ type MatchResponse = {
     rerankModel: string;
     embeddingStatus: string;
     matchingMethod: string;
+    modelPinning: string;
     profileInputs: string;
     embeddingDimensions?: number;
   };
@@ -26,10 +27,16 @@ type MatchResponse = {
 
 const DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2";
 const DEFAULT_RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2";
+const DEFAULT_POOL_NAME = "peerflow-reviewer-matching";
 const PROFILE_INPUTS =
   "paper title + abstract + field vs reviewer expertise + institution + past review topics";
 const MATCHING_METHOD =
   "Superlinked semantic embedding plus reranking, not keyword search";
+
+type PinningResult = {
+  routedGpu: string;
+  status: string;
+};
 
 function reviewerProfile(reviewer: (typeof reviewers)[number]) {
   return [
@@ -55,6 +62,7 @@ function pipelineMetadata(
   embeddingModel: string,
   rerankModel: string,
   embeddingStatus: string,
+  modelPinning: string,
   embeddingDimensions?: number,
 ) {
   return {
@@ -62,6 +70,7 @@ function pipelineMetadata(
     rerankModel,
     embeddingStatus,
     matchingMethod: MATCHING_METHOD,
+    modelPinning,
     profileInputs: PROFILE_INPUTS,
     ...(embeddingDimensions ? { embeddingDimensions } : {}),
   };
@@ -71,6 +80,7 @@ function fallback(
   source: string,
   embeddingModel = DEFAULT_EMBEDDING_MODEL,
   rerankModel = DEFAULT_RERANK_MODEL,
+  modelPinning = "not attempted",
 ): MatchResponse {
   return {
     matches: reviewers,
@@ -79,6 +89,7 @@ function fallback(
       embeddingModel,
       rerankModel,
       "mock fallback; live SIE embedding not completed",
+      modelPinning,
     ),
     source,
   };
@@ -92,6 +103,79 @@ function scoreToFit(score: number, minScore: number, maxScore: number) {
   return Math.round(78 + normalised * 18);
 }
 
+async function ensurePinnedModels({
+  adminToken,
+  embeddingModel,
+  endpoint,
+  gpu,
+  poolName,
+  rerankModel,
+  timeoutMs,
+}: {
+  adminToken?: string;
+  embeddingModel: string;
+  endpoint: string;
+  gpu: string;
+  poolName: string;
+  rerankModel: string;
+  timeoutMs: number;
+}): Promise<PinningResult> {
+  if (!adminToken) {
+    return {
+      routedGpu: gpu,
+      status: "not configured; using default SIE GPU routing",
+    };
+  }
+
+  if (process.env.SUPERLINKED_PIN_MODELS === "false") {
+    return {
+      routedGpu: gpu,
+      status: "disabled by SUPERLINKED_PIN_MODELS=false",
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const poolGpuCount = Number(process.env.SUPERLINKED_POOL_GPU_COUNT ?? 1);
+  const models = [embeddingModel, rerankModel];
+
+  try {
+    const response = await fetch(`${endpoint.replace(/\/+$/, "")}/v1/pools`, {
+      body: JSON.stringify({
+        gpus: { [gpu]: Number.isFinite(poolGpuCount) ? poolGpuCount : 1 },
+        name: poolName,
+        pinned_models: models,
+      }),
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${adminToken}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return {
+        routedGpu: gpu,
+        status: `pinning request failed with HTTP ${response.status}; using default SIE GPU routing`,
+      };
+    }
+
+    return {
+      routedGpu: `${poolName}/${gpu}`,
+      status: `requested pinned pool ${poolName} for ${models.join(" and ")}`,
+    };
+  } catch {
+    return {
+      routedGpu: gpu,
+      status: "pinning request failed; using default SIE GPU routing",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => null)) as {
     embeddingModel?: string;
@@ -101,7 +185,10 @@ export async function POST(request: Request) {
   const paper =
     papers.find((candidate) => candidate.id === payload?.paperId) ?? papers[0];
   const endpoint = process.env.SUPERLINKED_ENDPOINT ?? process.env.SIE_ENDPOINT;
-  const apiKey = process.env.SUPERLINKED_API_KEY ?? process.env.SIE_API_KEY;
+  const adminToken =
+    process.env.SUPERLINKED_ADMIN_TOKEN ?? process.env.SIE_ADMIN_TOKEN;
+  const apiKey =
+    process.env.SUPERLINKED_API_KEY ?? process.env.SIE_API_KEY ?? adminToken;
   const embeddingModel =
     payload?.embeddingModel ??
     process.env.SUPERLINKED_EMBEDDING_MODEL ??
@@ -117,9 +204,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const gpu = process.env.SUPERLINKED_GPU ?? "l4";
+  const pinning = await ensurePinnedModels({
+    adminToken,
+    embeddingModel,
+    endpoint,
+    gpu,
+    poolName: process.env.SUPERLINKED_POOL_NAME ?? DEFAULT_POOL_NAME,
+    rerankModel,
+    timeoutMs: Number(process.env.SUPERLINKED_PIN_TIMEOUT_MS ?? 10000),
+  });
+
   const client = new SIEClient(endpoint, {
     apiKey,
-    gpu: process.env.SUPERLINKED_GPU ?? "l4",
+    gpu: pinning.routedGpu,
     timeout: Number(process.env.SUPERLINKED_TIMEOUT_MS ?? 45000),
     waitForCapacity: true,
     provisionTimeout: Number(
@@ -186,6 +284,7 @@ export async function POST(request: Request) {
         embeddingModel,
         rerankModel,
         embeddingStatus,
+        pinning.status,
         embeddingDimensions,
       ),
       source: matches.length > 0
@@ -194,7 +293,12 @@ export async function POST(request: Request) {
     } satisfies MatchResponse);
   } catch {
     return Response.json(
-      fallback("SIE score request failed", embeddingModel, rerankModel),
+      fallback(
+        "SIE score request failed",
+        embeddingModel,
+        rerankModel,
+        pinning.status,
+      ),
     );
   } finally {
     await client.close();

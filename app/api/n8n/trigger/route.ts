@@ -155,6 +155,12 @@ export async function POST(request: Request) {
             embeddingModel:
               process.env.SUPERLINKED_EMBEDDING_MODEL ??
               "sentence-transformers/all-MiniLM-L6-v2",
+            modelPinning: {
+              enabled: Boolean(process.env.SUPERLINKED_ADMIN_TOKEN),
+              poolName:
+                process.env.SUPERLINKED_POOL_NAME ??
+                "peerflow-reviewer-matching",
+            },
             rerankModel:
               process.env.SUPERLINKED_RERANK_MODEL ??
               "cross-encoder/ms-marco-MiniLM-L-6-v2",

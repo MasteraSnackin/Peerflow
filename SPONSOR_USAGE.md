@@ -10,7 +10,7 @@ reviewer matching and follow-up.
 | --- | --- | --- |
 | Attio | CRM layer for authors, institutions and follow-up tasks. | Live REST API read/write is working. `npm run attio:seed` created demo companies, people and reviewer outreach tasks in the Attio workspace. |
 | n8n | Orchestration layer. Peerflow sends one `paper.submitted` event to n8n, then n8n owns Attio writes, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Production webhook returns `200` and starts the workflow. Live canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow file: `n8n/peerflow-hackathon-orchestration.json`. |
-| Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Peerflow embeds paper title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise, institution and past review topics, then reranks with `ms-marco-MiniLM-L-6-v2`. | The reviewer panel shows top 3 matches with fit scores, such as `Amara Osei, 94% fit`, and explains this is semantic matching rather than keyword search. n8n pushes those matches into the Attio follow-up task payload. |
+| Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Peerflow embeds paper title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise, institution and past review topics, then reranks with `ms-marco-MiniLM-L-6-v2`. With `SUPERLINKED_ADMIN_TOKEN`, the route requests a pinned SIE model pool before matching. | The reviewer panel shows top 3 matches with fit scores, such as `Amara Osei, 94% fit`, and explains this is semantic matching rather than keyword search. n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source discovery and extraction for Aida's live corpus. | `/api/tavily/discover` searches allowed open-access-friendly domains and extracts source snippets. |
 | SLNG | Author voice intake. In Peerflow, the author records a submission request; `/api/slng/intake` sends the audio to SLNG STT; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The app has a microphone voice-intake panel. The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the voice panel and Attio record preview. |
 | Aikido | Security evidence for the side challenge. | The app links to the configured Aikido audit report from the integration readiness grid. |
@@ -92,7 +92,8 @@ scores such as `Amara Osei, 94% fit`. The app explains that Superlinked matches
 paper title, abstract and field against reviewer expertise, institution and
 past review topics, not simple keywords. The route uses Superlinked's
 open-source inference engine with `all-MiniLM-L6-v2` for semantic embeddings and
-`ms-marco-MiniLM-L-6-v2` for reranking.
+`ms-marco-MiniLM-L-6-v2` for reranking. The server-only admin token is used to
+request the `peerflow-reviewer-matching` pinned model pool when configured.
 
 ### Full Demo Page
 
@@ -111,6 +112,10 @@ workflow and integration readiness together.
 - On 27 June 2026, `npm run attio:seed` created live Attio follow-up tasks
   containing the Superlinked reviewer matches, fit scores, embedding model and
   rerank model.
+- The Superlinked admin token is stored only in local/server env and is used for
+  model-pool pinning, not exposed to the browser.
+- The `peerflow-reviewer-matching` SIE pool readback reports active state with
+  `all-MiniLM-L6-v2` and `ms-marco-MiniLM-L-6-v2` pinned on one L4 worker.
 - Superlinked reviewer matches are carried into the n8n Attio outreach task
   payload so the CRM follow-up contains the top reviewer candidates.
 - The `paper.submitted` payload includes the n8n orchestration contract used by
