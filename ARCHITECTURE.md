@@ -41,12 +41,14 @@ flowchart LR
   App --> MatchRoute[/POST /api/superlinked/match-reviewers/]
   App --> AttioRoute[/GET /api/attio/status/]
   App --> N8nRoute[/POST /api/n8n/trigger/]
+  App --> TavilyRoute[/POST /api/tavily/discover/]
   App --> StaticData[(Static demo data)]
   AidaRoute --> Corpus[(Mock corpus snippets)]
   AidaRoute --> Gemini[Gemini API]
   MatchRoute --> SIE[Superlinked SIE]
   AttioRoute --> Attio[Attio CRM]
   N8nRoute --> N8N[n8n webhook]
+  TavilyRoute --> Tavily[Tavily Search and Extract]
   App -. planned .-> SLNG[SLNG voice intake]
   App -. planned .-> Aikido[Aikido security report]
   App -. optional scaffold .-> D1[(Cloudflare D1)]
@@ -158,6 +160,19 @@ infrastructure, but no application data is currently persisted there.
 - Failure modes or operational concerns: test webhooks may return `404` unless
   the n8n workflow is actively listening. The route returns a clearer
   mock/fallback status rather than blocking the demo.
+
+### Tavily Discovery API Route
+
+- Responsibilities: search open-access-friendly sources and extract text from
+  the top allowed source URL for future corpus ingestion.
+- Main technologies: Next-style `POST` route, TypeScript and server-side
+  `fetch`.
+- Data owned or transformed: search query, source title, URL, host, score and
+  extracted snippet.
+- External dependencies: Tavily API via `TAVILY_API_KEY`.
+- Failure modes or operational concerns: Tavily results are treated as candidate
+  evidence only. They are not automatically added to Aida's answer corpus or
+  used to answer unsupported questions.
 
 ### Static Demo Data
 

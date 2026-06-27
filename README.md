@@ -42,6 +42,7 @@ legal open-access metadata, abstracts and authorised links.
   stages, with live workspace validation when configured.
 - Superlinked SIE reviewer matching using open-source reranking.
 - Aida, a corpus-grounded assistant with a no-citation, no-claim rule.
+- Tavily Search and Extract for open-access source discovery.
 - n8n webhook triggering during the agent workflow when configured.
 - SLNG readiness and an Aikido security report link for the hackathon side
   challenges.
@@ -51,10 +52,10 @@ legal open-access metadata, abstracts and authorised links.
 ## Tech Stack
 
 - Node.js `>=22.13.0`
-- Next.js `16.2.6`
+- Next.js `16.2.9`
 - React `19.2.6`
 - vinext `0.0.50`
-- Vite `8.0.13`
+- Vite `8.1.0`
 - Tailwind CSS `4.2.1`
 - TypeScript `5.9.3`
 - Superlinked SIE SDK `0.6.14`
@@ -69,6 +70,7 @@ flowchart LR
   WebApp --> AidaAPI[/Aida API route/]
   WebApp --> MatchAPI[/Superlinked match route/]
   WebApp --> Workflow[n8n webhook]
+  WebApp --> Discovery[Tavily discovery]
   AidaAPI --> Gemini[Gemini model]
   AidaAPI --> Corpus[Open-access corpus snippets]
   MatchAPI --> SIE[Superlinked SIE]
@@ -79,10 +81,12 @@ flowchart LR
 
 The web app renders the demo surface and calls server-side API routes for model
 work. Aida answers from cited corpus snippets through the Gemini-backed route,
-while reviewer matching is reranked through Superlinked SIE. Attio is validated
-through a read-only server route, and n8n can receive the workflow payload from
-the agent run. SLNG and Aikido are configured through environment variables so
-live services can be plugged in without exposing credentials to the browser.
+while reviewer matching is reranked through Superlinked SIE. Tavily can search
+and extract candidate open-access sources for future corpus ingestion. Attio is
+validated through a read-only server route, and n8n can receive the workflow
+payload from the agent run. SLNG and Aikido are configured through environment
+variables so live services can be plugged in without exposing credentials to the
+browser.
 
 ## Installation
 
@@ -124,12 +128,13 @@ Typical demo flow:
 1. Open Peerflow locally.
 2. Ask Aida a supported research question and show the cited evidence trace.
 3. Ask Aida an unsupported question and show the refusal behaviour.
-4. Click `Run agent`.
-5. Show Attio workspace validation, Superlinked reviewer matching and the
+4. Search open sources with Tavily and show the candidate source.
+5. Click `Run agent`.
+6. Show Attio workspace validation, Superlinked reviewer matching and the
    Attio-style pipeline state.
-6. Show the n8n workflow trigger result in the agent log.
-7. Open the Aikido security report from the integration grid.
-8. Explain how SLNG voice intake fits into the workflow once connected.
+7. Show the n8n workflow trigger result in the agent log.
+8. Open the Aikido security report from the integration grid.
+9. Explain how SLNG voice intake fits into the workflow once connected.
 
 ## Configuration
 
@@ -153,6 +158,7 @@ AIDA_MODEL_API_KEY=
 AIDA_GEMINI_MODEL=gemini-3.5-flash
 AIDA_VECTOR_INDEX_URL=
 AIDA_EMBEDDING_MODEL=
+TAVILY_API_KEY=
 OPENALEX_EMAIL=
 UNPAYWALL_EMAIL=
 SEMANTIC_SCHOLAR_API_KEY=
@@ -176,6 +182,7 @@ Environment variable notes:
 | `AIDA_GEMINI_MODEL` | Gemini model used by Aida. |
 | `AIDA_VECTOR_INDEX_URL` | Future vector index for the research corpus. |
 | `AIDA_EMBEDDING_MODEL` | Future embedding model for corpus retrieval. |
+| `TAVILY_API_KEY` | Tavily Search and Extract for open-access source discovery. |
 | `OPENALEX_EMAIL` | Optional OpenAlex polite-pool contact. |
 | `UNPAYWALL_EMAIL` | Optional Unpaywall API contact. |
 | `SEMANTIC_SCHOLAR_API_KEY` | Optional Semantic Scholar API key. |
@@ -319,6 +326,37 @@ Response:
 }
 ```
 
+### `POST /api/tavily/discover`
+
+Searches open-access-friendly sources through Tavily, then extracts text from
+the top allowed source URL. This route surfaces candidate evidence for future
+corpus ingestion; it does not bypass Aida's citation guardrail.
+
+Request:
+
+```json
+{
+  "query": "How could multimodal retrieval reduce clinical review work?"
+}
+```
+
+Response:
+
+```json
+{
+  "mode": "live",
+  "source": "Tavily search + extract",
+  "query": "How could multimodal retrieval reduce clinical review work?",
+  "result": {
+    "title": "string",
+    "url": "https://arxiv.org/...",
+    "host": "arxiv.org",
+    "snippet": "string",
+    "score": 0.92
+  }
+}
+```
+
 ## Tests
 
 There is no dedicated test suite yet.
@@ -340,6 +378,7 @@ fixes may change framework dependencies shortly before the demo.
 - Promote the n8n trigger from demo payloads to durable workflow run tracking.
 - Add SLNG voice recording and transcript parsing.
 - Replace mock corpus snippets with a real vector index.
+- Promote Tavily candidates into a reviewed open-access ingestion queue.
 - Attach Aikido scan evidence inside the app.
 - Add automated tests for API routes and core UI states.
 - Deploy a public demo URL.

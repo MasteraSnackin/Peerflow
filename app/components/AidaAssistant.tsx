@@ -16,6 +16,19 @@ type AidaAnswer = Pick<
   source?: string;
 };
 
+type TavilyDiscovery = {
+  mode: "live" | "mock";
+  source: string;
+  query: string;
+  result: {
+    title: string;
+    url: string;
+    host: string;
+    snippet: string;
+    score: number | null;
+  } | null;
+};
+
 export default function AidaAssistant({
   articles,
   questions,
@@ -23,6 +36,8 @@ export default function AidaAssistant({
   const [selectedId, setSelectedId] = useState(questions[0].id);
   const [liveAnswer, setLiveAnswer] = useState<AidaAnswer | null>(null);
   const [isAsking, setIsAsking] = useState(false);
+  const [discovery, setDiscovery] = useState<TavilyDiscovery | null>(null);
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const selected =
     questions.find((question) => question.id === selectedId) ?? questions[0];
   const answer = liveAnswer ?? selected;
@@ -55,6 +70,28 @@ export default function AidaAssistant({
       });
     } finally {
       setIsAsking(false);
+    }
+  }
+
+  async function discoverSource() {
+    setIsDiscovering(true);
+    try {
+      const response = await fetch("/api/tavily/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: selected.question }),
+      });
+      const result = (await response.json()) as TavilyDiscovery;
+      setDiscovery(result);
+    } catch {
+      setDiscovery({
+        mode: "mock",
+        source: "Tavily discovery fallback",
+        query: selected.question,
+        result: null,
+      });
+    } finally {
+      setIsDiscovering(false);
     }
   }
 
@@ -93,6 +130,7 @@ export default function AidaAssistant({
               onClick={() => {
                 setSelectedId(question.id);
                 setLiveAnswer(null);
+                setDiscovery(null);
               }}
               type="button"
             >
@@ -114,6 +152,20 @@ export default function AidaAssistant({
             {liveAnswer
               ? `${liveAnswer.mode ?? "mock"} | ${liveAnswer.source ?? "local corpus"}`
               : "local corpus trace"}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            className="rounded-md border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:bg-white/5"
+            disabled={isDiscovering}
+            onClick={discoverSource}
+            type="button"
+          >
+            {isDiscovering ? "Searching sources" : "Search open sources"}
+          </button>
+          <span className="text-xs font-medium text-[#9fb3ad]">
+            Tavily search + extract
           </span>
         </div>
       </div>
@@ -198,6 +250,43 @@ export default function AidaAssistant({
                 </p>
               </article>
             ))
+          )}
+        </div>
+
+        <div className="mt-5 rounded-lg border border-[#d9e1dd] bg-[#f9fbfa] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase text-[#55716a]">
+              Tavily discovery
+            </p>
+            <span className="text-xs font-medium text-[#60706c]">
+              {discovery
+                ? `${discovery.mode} | ${discovery.source}`
+                : "candidate source search"}
+            </span>
+          </div>
+          {discovery?.result ? (
+            <div className="mt-3">
+              <a
+                className="text-sm font-semibold text-[#11775f] underline-offset-4 hover:underline"
+                href={discovery.result.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {discovery.result.title}
+              </a>
+              <p className="mt-1 text-xs text-[#60706c]">
+                {discovery.result.host}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#40514d]">
+                {discovery.result.snippet ||
+                  "Tavily found a source, but no extractable text was returned."}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-[#60706c]">
+              Search open sources to find a candidate article for the next
+              corpus-ingestion step.
+            </p>
           )}
         </div>
       </div>

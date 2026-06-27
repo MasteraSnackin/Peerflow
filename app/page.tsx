@@ -12,6 +12,7 @@ const partnerStack = [
   "Attio CRM",
   "n8n orchestration",
   "Superlinked matching",
+  "Tavily discovery",
   "SLNG voice intake",
   "Aikido security",
 ];
@@ -36,6 +37,11 @@ const integrationDefinitions = [
     service: "Superlinked",
     keys: ["SUPERLINKED_ENDPOINT", "SUPERLINKED_API_KEY"],
     purpose: "Match papers to reviewers through semantic similarity.",
+  },
+  {
+    service: "Tavily",
+    keys: ["TAVILY_API_KEY"],
+    purpose: "Search and extract open-access source candidates for Aida.",
   },
   {
     service: "Aikido",
@@ -129,7 +135,7 @@ export default function Home() {
               </p>
             </article>
             <article className="min-h-[132px] rounded-lg border border-[#d9e1dd] bg-white p-4 shadow-sm">
-              <p className="text-3xl font-semibold">{configuredCount}/6</p>
+              <p className="text-3xl font-semibold">{configuredCount}/7</p>
               <p className="mt-2 text-sm leading-6 text-[#60706c]">
                 integrations configured from environment variables
               </p>

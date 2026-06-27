@@ -27,6 +27,7 @@ the payload.
 | --- | --- | --- |
 | Attio Agentic CRM | Validates the workspace and previews author, institution, paper and review-stage records. | Live read-only validation |
 | Superlinked | Reranks reviewer profiles against the selected paper abstract. | Live |
+| Tavily | Searches and extracts candidate open-access sources for future Aida corpus ingestion. | Live |
 | n8n | Receives paper and reviewer payloads for reviewer outreach orchestration. | Configured; needs active production workflow |
 | SLNG | Planned voice intake for author submission briefs. | Key configured; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
@@ -35,14 +36,15 @@ the payload.
 ## Demo Flow
 
 1. Open the app at `http://localhost:3000/`.
-2. Point out `6/6` configured integrations.
+2. Point out `7/7` configured integrations.
 3. Ask Aida a supported question and show citations.
 4. Ask Aida the patient-treatment question and show refusal.
-5. Click `Run agent`.
-6. Show Attio validation in the record preview.
-7. Show Superlinked live reviewer scores.
-8. Show the n8n result in the agent log.
-9. Open the Aikido report from the integration grid.
+5. Search open sources with Tavily and show the candidate source.
+6. Click `Run agent`.
+7. Show Attio validation in the record preview.
+8. Show Superlinked live reviewer scores.
+9. Show the n8n result in the agent log.
+10. Open the Aikido report from the integration grid.
 
 ## Judge Talk Track
 
@@ -56,6 +58,7 @@ the payload.
 ## Current Live Status
 
 - Aida/Gemini: live.
+- Tavily: live source discovery.
 - Attio: live read-only workspace validation.
 - Superlinked: live reviewer reranking.
 - Aikido: configured report link.
