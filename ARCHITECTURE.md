@@ -160,16 +160,18 @@ scaffolded infrastructure, but no application data is currently persisted there.
 
 ### Superlinked Matching API Route
 
-- Responsibilities: semantically match paper profiles against reviewer profiles
-  and normalise SIE scores into judge-friendly fit percentages.
+- Responsibilities: semantically match paper profiles against reviewer profiles,
+  rerank candidates and normalise SIE scores into judge-friendly fit
+  percentages.
 - Main technologies: Next-style `POST` route, TypeScript and
   `@superlinked/sie-sdk`.
 - Data owned or transformed: selected paper title, abstract and field; reviewer
-  expertise, institution and past review topics; raw SIE scores; normalised fit
-  values; and fallback reviewer matches.
-- External dependencies: Superlinked SIE endpoint and key. The default rerank
-  model is `cross-encoder/ms-marco-MiniLM-L-6-v2`, with GPU lane defaulting to
-  `l4`.
+  expertise, institution and past review topics; dense embedding metadata; raw
+  SIE scores; normalised fit values; and fallback reviewer matches.
+- External dependencies: Superlinked SIE endpoint and key. The default
+  embedding model is `sentence-transformers/all-MiniLM-L6-v2`; the default
+  rerank model is `cross-encoder/ms-marco-MiniLM-L-6-v2`, with GPU lane
+  defaulting to `l4`.
 - Failure modes or operational concerns: missing credentials, cold capacity,
   timeout or scoring errors return mock reviewer matches. The client labels
   whether the source was live or mock.
@@ -479,8 +481,9 @@ Recommended additions:
   yet cached, persisted, vector-ranked or human-reviewed.
 - Gemini fallback to mock answer: preserves demo flow during provider issues,
   but production systems should expose failures more explicitly.
-- Superlinked reranking route: demonstrates semantic reviewer matching with a
-  real side-challenge service, while keeping local mock scores as a safety net.
+- Superlinked matching route: demonstrates semantic reviewer matching with
+  `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking, while
+  keeping local mock scores as a safety net.
 - No active database: reduces implementation complexity for the MVP, but limits
   auditability, collaboration, repeatability and CRM-grade workflow state.
 - Environment-variable integration model: makes partner services pluggable, but

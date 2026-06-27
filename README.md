@@ -43,7 +43,8 @@ legal open-access metadata, abstracts and authorised links.
 - n8n-centred orchestration for Attio CRM records, reviewer matching, outreach
   and stage updates.
 - Importable n8n workflow JSON for the hackathon orchestration path.
-- Superlinked SIE reviewer matching exposed as a backend route n8n can call.
+- Superlinked SIE semantic reviewer matching exposed as a backend route n8n can
+  call: `all-MiniLM-L6-v2` embeddings plus `ms-marco-MiniLM-L-6-v2` reranking.
 - Aida, a corpus-grounded assistant with live OpenAlex/Tavily retrieval and a
   no-citation, no-claim rule.
 - Tavily Search and Extract for supplemental open-access source discovery.
@@ -108,7 +109,7 @@ can be plugged in without exposing credentials to the browser.
 | --- | --- | --- |
 | Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
 | n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
-| Superlinked | Semantic matching between paper profiles and reviewer expertise profiles. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
+| Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
 | SLNG | Voice intake for author submission briefs. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible. Production voice capture is still planned. |
@@ -181,6 +182,7 @@ PEERFLOW_PUBLIC_URL=
 SLNG_API_KEY=
 SUPERLINKED_ENDPOINT=
 SUPERLINKED_API_KEY=
+SUPERLINKED_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 SUPERLINKED_RERANK_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
 SUPERLINKED_GPU=l4
 SUPERLINKED_TIMEOUT_MS=45000
@@ -209,6 +211,7 @@ Environment variable notes:
 | `SLNG_API_KEY` | SLNG voice intake integration for structured paper intake. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
+| `SUPERLINKED_EMBEDDING_MODEL` | Semantic embedding model for paper and reviewer profiles. |
 | `SUPERLINKED_RERANK_MODEL` | Reviewer reranking model. |
 | `SUPERLINKED_GPU` | SIE GPU lane, default `l4`. |
 | `AIKIDO_REPORT_URL` | Link shown in the UI for repository security evidence. |
@@ -315,9 +318,12 @@ Response:
 
 ### `POST /api/superlinked/match-reviewers`
 
-Reranks reviewer profiles against a selected paper through Superlinked SIE.
-Falls back to local mock reviewer scores if SIE is unavailable, cold or missing
-credentials.
+Uses Superlinked SIE for semantic reviewer matching. Peerflow embeds the paper
+title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise,
+institution and past review topics, then reranks candidates with
+`ms-marco-MiniLM-L-6-v2`. This is matching by research meaning, not keyword
+overlap. The route falls back to local mock reviewer scores if SIE is
+unavailable, cold or missing credentials.
 
 Request:
 
@@ -336,12 +342,20 @@ Response:
       "name": "Amara Osei",
       "institution": "Imperial College London",
       "speciality": "Clinical retrieval",
-      "fit": 96,
+      "fit": 94,
       "availability": "2 reviews open"
     }
   ],
   "mode": "live",
-  "source": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  "pipeline": {
+    "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
+    "rerankModel": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "embeddingStatus": "embedded 4 profiles into 384-dimensional dense vectors",
+    "matchingMethod": "Superlinked semantic embedding plus reranking, not keyword search",
+    "profileInputs": "paper title + abstract + field vs reviewer expertise + institution + past review topics",
+    "embeddingDimensions": 384
+  },
+  "source": "sentence-transformers/all-MiniLM-L6-v2 -> cross-encoder/ms-marco-MiniLM-L-6-v2"
 }
 ```
 

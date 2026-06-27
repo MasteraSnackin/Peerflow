@@ -152,6 +152,12 @@ export async function POST(request: Request) {
           url: reviewerMatchEndpoint,
           body: {
             paperId: paper.id,
+            embeddingModel:
+              process.env.SUPERLINKED_EMBEDDING_MODEL ??
+              "sentence-transformers/all-MiniLM-L6-v2",
+            rerankModel:
+              process.env.SUPERLINKED_RERANK_MODEL ??
+              "cross-encoder/ms-marco-MiniLM-L-6-v2",
           },
           reachableFromN8nCloud: backendReachableFromN8n,
         },

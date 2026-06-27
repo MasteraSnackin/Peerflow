@@ -39,7 +39,7 @@ const integrationDefinitions = [
     service: "Superlinked",
     keys: ["SUPERLINKED_ENDPOINT", "SUPERLINKED_API_KEY"],
     purpose:
-      "Semantic matching between paper profiles and reviewer expertise profiles.",
+      "Embed paper and reviewer profiles, then rerank reviewer fit by meaning.",
   },
   {
     service: "Tavily",

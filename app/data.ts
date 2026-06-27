@@ -170,7 +170,7 @@ export const workflowSteps: WorkflowStep[] = [
     title: "Semantic reviewer matching",
     owner: "n8n -> Superlinked",
     detail:
-      "Superlinked semantically compares paper title, abstract and field against reviewer expertise, institution and past review topics, then returns the top 3 reviewer matches with fit scores.",
+      "Superlinked embeds paper title, abstract and field with all-MiniLM-L6-v2, embeds reviewer expertise, institution and past review topics, then reranks with ms-marco-MiniLM-L-6-v2 and returns the top 3 reviewer matches with fit scores.",
   },
   {
     id: "outreach",

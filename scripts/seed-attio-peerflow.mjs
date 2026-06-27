@@ -179,6 +179,8 @@ async function createTask(paper, company, person) {
         `Field: ${paper.field}`,
         "Stage: Reviewer matched",
         "Matching method: Superlinked semantic matching, not keyword search.",
+        "Embedding model: all-MiniLM-L6-v2.",
+        "Rerank model: ms-marco-MiniLM-L-6-v2.",
         "Paper profile embedded: title + abstract + field.",
         "Reviewer profiles embedded: expertise + institution + past review topics.",
         "Top reviewer matches:",

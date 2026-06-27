@@ -118,7 +118,7 @@ export default function AgentConsole({
       }
       if (step.id === "match") {
         const source =
-          "Superlinked semantic matching: title + abstract + field compared with reviewer expertise + institution + past topics. Not keyword search.";
+          "Superlinked semantic matching: all-MiniLM-L6-v2 embeddings plus ms-marco-MiniLM-L-6-v2 reranking. Not keyword search.";
         setLiveReviewers(reviewers);
         setMatchSource(source);
         detail = `${step.detail} Outcome: ${source}.`;
@@ -325,8 +325,9 @@ export default function AgentConsole({
           </p>
           {completedSet.has("match") ? (
             <p className="mt-2 text-xs leading-5 text-[#60706c]">
-              Semantic profile: paper title + abstract + field matched against
-              reviewer expertise + institution + past review topics.
+              Semantic profile: paper title + abstract + field embedded against
+              reviewer expertise + institution + past review topics, then
+              reranked by research meaning.
             </p>
           ) : null}
           <div className="mt-3 divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
