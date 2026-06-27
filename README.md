@@ -51,8 +51,7 @@ should only use legal open-access metadata, abstracts and authorised links.
   no-citation, no-claim rule.
 - Aida chat with keyboard input, browser voice dictation and browser voice
   output for cited answers.
-- Browser voice output for fixed Aida answers and the latest agent workflow
-  log.
+- Browser voice output for the latest agent workflow log.
 - Tavily Search and Extract for supplemental open-access source discovery.
 - n8n webhook triggering with a single `paper.submitted` event.
 - SLNG microphone voice intake and an Aikido security report link for the hackathon side
@@ -126,7 +125,7 @@ sequence diagrams, trust boundary, state, deployment and proof-map views.
 | n8n | Orchestration layer for `paper.submitted`. | Configured, but latest production webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
-| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. Aida supports fixed prompt buttons plus free-text chat, browser voice dictation and browser speech output. |
+| Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. Aida supports a compact fixed-prompt launcher plus free-text chat, browser voice dictation and browser speech output. |
 | SLNG | Voice intake for author submission briefs. | Microphone recording is implemented. `/api/slng/intake` sends audio to SLNG STT when configured, then shows the transcript and structured paper record. |
 | Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 

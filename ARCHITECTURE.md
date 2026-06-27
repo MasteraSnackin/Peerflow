@@ -136,9 +136,9 @@ infrastructure, but no application data is currently persisted there.
 
 ### Aida Assistant and Chat
 
-- Responsibilities: let a user ask predefined research questions or free-text
-  chat questions, display the answer, citation trace, evidence coverage and
-  refusal behaviour, and provide browser speech input/output where supported.
+- Responsibilities: let a user launch predefined research questions, ask
+  free-text chat questions, display chat answers with citation trace and
+  evidence coverage, and provide browser speech input/output where supported.
 - Main technologies: React client component with local state and browser
   `fetch`, browser `SpeechRecognition`/`webkitSpeechRecognition` for chat
   dictation, and browser `speechSynthesis` for spoken answers.
