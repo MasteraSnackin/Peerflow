@@ -320,16 +320,18 @@ Current n8n workflow canvas:
 ### Worker and Build Layer
 
 - Responsibilities: package the app for vinext, Vite and Cloudflare
-  Worker-compatible output; handle the vinext image optimisation route.
+  Worker-compatible output; handle the vinext image optimisation route; and
+  keep the project deployable through the current Vercel configuration.
 - Main technologies: vinext, Vite, Cloudflare Vite plugin, Cloudflare Worker
-  entry point and a small Sites packaging plugin.
+  entry point, Vercel and a small Sites packaging plugin.
 - Data owned or transformed: build output, `.openai/hosting.json` metadata and
   optional Drizzle migrations copied into `dist/.openai`.
-- External dependencies: Cloudflare runtime APIs for assets, image transforms
-  and optional D1.
+- External dependencies: Vercel build/runtime infrastructure, plus Cloudflare
+  runtime APIs for the optional Worker-compatible path.
 - Failure modes or operational concerns: local development runs through
-  `vinext dev`; production deployment details are not fully documented in the
-  repository yet.
+  `vinext dev`; Vercel production builds run `npx next build` from
+  `vercel.json`; the Cloudflare Worker path remains scaffolded but is not the
+  current public deployment target.
 
 ## Data Flow
 
@@ -404,16 +406,19 @@ D1 are available as a future path, but the schema contains no tables.
 - Runtime: Node.js `>=22.13.0` for local development and build commands.
 - Frameworks: vinext with Next.js app router conventions and Vite.
 - Local development: `npm run dev`, usually served at `http://localhost:3000/`.
-- Build: `npm run build`, which runs `vinext build`.
+- Local build: `npm run build`, which runs `vinext build`.
+- Vercel build: `npx next build`, configured in `vercel.json`.
 - Production start: `npm run start`, which runs `vinext start`.
+- Current public deployment:
+  `https://peerflow-agentic-research-crm.vercel.app/`.
+- Deployment model: Vercel CLI deployment is live. GitHub push-to-deploy is not
+  confirmed until the Vercel project is connected to the GitHub repository in
+  the Vercel dashboard.
 - Cloudflare compatibility: `worker/index.ts` provides a Worker entry point and
   image optimisation route. `vite.config.ts` wires the Cloudflare Vite plugin.
 - Sites packaging: `build/sites-vite-plugin.ts` copies hosting metadata and
   Drizzle migrations into `dist/.openai` during builds.
 - Hosting config: `.openai/hosting.json` currently has no D1 or R2 binding.
-
-Current deployment URL is not recorded in the repository. Use `<ADD DETAIL>` if
-this document is published before a public URL exists.
 
 ## Scalability and Reliability
 
@@ -518,7 +523,8 @@ redaction.
 Current observability is minimal:
 
 - `npm run lint` verifies static code quality.
-- `npm run build` verifies the production build.
+- `npm run build` verifies the vinext build.
+- `npx next build` verifies the Vercel build path.
 - API routes return `mode` and `source` fields so the UI can show whether a
   response came from live or mock execution.
 - There is no structured logging, tracing, metrics dashboard, uptime check or
@@ -576,4 +582,5 @@ Recommended additions:
 - Attach Aikido scan output and link it to build or release evidence.
 - Add automated tests for API route fallback behaviour, citation validation and
   core UI states.
-- Record the public deployment URL and deployment procedure once available.
+- Connect Vercel to GitHub for automatic push-to-deploy and deployment status
+  evidence.
