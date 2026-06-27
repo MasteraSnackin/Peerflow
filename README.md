@@ -98,8 +98,10 @@ from cited evidence. For the agent workflow, Peerflow emits one
 the event, calls Attio to create or update records, calls Peerflow's
 Superlinked reviewer-matching route or Superlinked directly, creates reviewer
 outreach or follow-up tasks, and updates the paper stage to
-`Reviewer matched`. The current n8n production webhook is published and accepts
-the event payload. The live n8n workflow canvas is recorded at
+`Reviewer matched`. Latest live check on 27 June 2026: the configured n8n
+production webhook returned `404`, so the workflow still needs to be activated
+or the production webhook path corrected before judges are told it is live. The
+live n8n workflow canvas is recorded at
 [peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list),
 and the repository workflow JSON contains the downstream nodes for the full
 orchestration path.
@@ -116,7 +118,7 @@ sequence diagrams, trust boundary, state, deployment and proof-map views.
 | Service | How Peerflow uses it | Current status |
 | --- | --- | --- |
 | Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
-| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
+| n8n | Orchestration layer for `paper.submitted`. | Configured, but latest production webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex/Tavily only; no local fallback corpus. Gemini answers when a model key is configured, with citation validation and refusal behaviour. |
@@ -168,8 +170,9 @@ Typical demo flow:
 4. Search open sources with Tavily and show the candidate source.
 5. Click `Run agent`.
 6. Show Peerflow sending one `paper.submitted` event to n8n.
-7. Explain that n8n owns Attio upserts, reviewer matching, outreach/tasks and
-   the `Reviewer matched` stage update.
+7. Explain that n8n is intended to own Attio upserts, reviewer matching,
+   outreach/tasks and the `Reviewer matched` stage update. If the webhook still
+   returns `404`, show the explicit setup message in the agent log.
 8. Open the live n8n workflow from the app's n8n card, or inspect
    `n8n/peerflow-hackathon-orchestration.json` if judges ask for the
    repository workflow structure.
@@ -446,9 +449,11 @@ companies, people and reviewer outreach tasks for the three sample Peerflow
 papers. It uses safe demo email/domain identifiers and reads the Attio key from
 `.env.local`.
 
-The active Attio developer webhook currently sends `record.created`,
-`record.updated`, `task.created` and `task.updated` events to the production
-n8n webhook URL configured in `.env.local`.
+The Attio developer webhook has been configured to send `record.created`,
+`record.updated`, `task.created` and `task.updated` events to the same
+production n8n webhook URL configured in `.env.local`. Latest live n8n check
+returned `404`, so confirm the n8n workflow is active before using this as
+judge proof.
 
 ### `POST /api/n8n/trigger`
 
@@ -459,8 +464,10 @@ For n8n test webhook URLs, a `404` usually means the workflow is not actively
 listening; use `Execute workflow` in n8n or switch to the production
 `/webhook/...` URL from an activated workflow.
 
-The published Peerflow n8n webhook currently proves payload acceptance. The
-live n8n workflow canvas is recorded at
+Latest deployed check on 27 June 2026 returned `404` from the configured
+production n8n webhook. The route reports this explicitly in the agent log and
+continues with a labelled planned/fallback path. The live n8n workflow canvas is
+recorded at
 [peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
 The workflow import file defines the downstream orchestration path:
 
@@ -488,9 +495,9 @@ Response:
 
 ```json
 {
-  "mode": "live",
+  "mode": "mock",
   "event": "paper.submitted",
-  "source": "n8n webhook accepted workflow payload",
+  "source": "n8n webhook returned 404; verify the workflow is active and the production URL is correct",
   "runId": "00000000-0000-4000-8000-000000000000",
   "orchestrationOwner": "n8n",
   "nextStage": "Reviewer matched"
@@ -557,8 +564,8 @@ sponsor mapping and final checklist.
 
 - Keep the live n8n workflow canvas aligned with
   `n8n/peerflow-hackathon-orchestration.json`.
-- Promote the n8n trigger from webhook acceptance to durable workflow run
-  tracking.
+- Activate or correct the n8n production webhook so it returns `live`, then
+  promote the n8n trigger to durable workflow run tracking.
 - Improve SLNG field extraction for arbitrary author submissions.
 - Persist live corpus retrieval results and selected citation traces.
 - Promote Tavily candidates into a reviewed open-access ingestion queue.

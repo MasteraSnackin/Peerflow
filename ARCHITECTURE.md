@@ -13,8 +13,10 @@ open-access abstracts through OpenAlex and can supplement them with Tavily
 extraction. Aida no longer uses a local fallback corpus. Live Gemini,
 Superlinked SIE, Attio read/write and n8n webhook calls are enabled when the
 required environment variables are present.
-The n8n production webhook is published and accepts `paper.submitted` payloads.
-The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
+Latest live check on 27 June 2026 shows the configured n8n production webhook
+returning `404`; the workflow must be activated/published or the production
+webhook path corrected before it can be used as live judge proof. The
+repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
 outreach/task and stage-update nodes. The live n8n workflow canvas URL is
 recorded in `N8N_WORKFLOW_URL`; the remaining n8n verification is to confirm
@@ -80,9 +82,10 @@ only receives rendered UI state and API responses. Credentials are read from
 server environment variables and are not intentionally sent to the client.
 Static demo data is still the source of truth for the CRM workflow queue.
 Aida's only research evidence source is live OpenAlex/Tavily retrieval. The n8n
-webhook currently proves orchestration hand-off; the
-prepared import file defines the intended full workflow. D1 support exists as
-scaffolded infrastructure, but no application data is currently persisted there.
+route proves that Peerflow can build and send the orchestration payload, but the
+configured production webhook currently returns `404`; the prepared import file
+defines the intended full workflow. D1 support exists as scaffolded
+infrastructure, but no application data is currently persisted there.
 
 ## Component Details
 
@@ -241,13 +244,14 @@ scaffolded infrastructure, but no application data is currently persisted there.
 - External dependencies: `N8N_WEBHOOK_URL`; optional `PEERFLOW_PUBLIC_URL` so
   n8n Cloud can call Peerflow backend routes from outside localhost; optional
   `N8N_WORKFLOW_URL` for the non-secret n8n canvas link shown in the app.
-- Failure modes or operational concerns: the production n8n webhook is
-  published and accepts the payload. The live n8n workflow URL is recorded, and
-  the downstream workflow shape is represented in
+- Failure modes or operational concerns: the configured production n8n webhook
+  returned `404` in the latest deployed check. The live n8n workflow URL is
+  recorded, and the downstream workflow shape is represented in
   `n8n/peerflow-hackathon-orchestration.json`. Exact node parity with the
-  signed-in canvas remains a manual UI check. Test webhooks may return `404`
-  unless the n8n workflow is actively listening. The route returns a clearer
-  mock/fallback status rather than blocking the demo.
+  signed-in canvas remains a manual UI check. A `404` on a production webhook
+  usually means the workflow is inactive or the registered production path does
+  not match `N8N_WEBHOOK_URL`. The route returns a clearer mock/fallback status
+  rather than blocking the demo.
 
 Current n8n workflow canvas:
 [peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
@@ -338,8 +342,9 @@ Current n8n workflow canvas:
 12. n8n creates a reviewer outreach or follow-up task payload that carries those
    matches into Attio.
 13. n8n updates the paper stage to `Reviewer matched`.
-14. Current verifiable state: the production webhook accepts the payload and
-    the importable workflow JSON contains these downstream nodes.
+14. Current verifiable state: Peerflow sends the payload, but the configured
+    production webhook returned `404` on 27 June 2026; the importable workflow
+    JSON contains these downstream nodes.
 15. The browser renders the n8n trigger status, planned reviewer preview and
     Attio-style record preview.
 
@@ -413,11 +418,11 @@ Limits and risks:
 - Gemini and corpus failures produce Aida refusals rather than local corpus
   answers. SIE failures still fall back to mock reviewer matches, so production
   monitoring would need clearer error reporting there.
-- n8n orchestration is triggered during the agent run. The cloud workflow
-  currently proves webhook acceptance; the prepared import file defines the
-  full downstream workflow and the live canvas URL is recorded. Exact node
-  parity with the signed-in n8n canvas remains a manual UI check. There is no
-  durable run-status polling or retry mechanism yet.
+- n8n orchestration is triggered during the agent run. The configured cloud
+  webhook currently returns `404`; the prepared import file defines the full
+  downstream workflow and the live canvas URL is recorded. Exact node parity
+  with the signed-in n8n canvas remains a manual UI check. There is no durable
+  run-status polling or retry mechanism yet.
 - Attio record creation is not implemented in the browser route. The app
   previews the record shape and uses a read-only Attio validation route. Live
   Attio write proof exists through the seed script and prepared n8n import
@@ -540,6 +545,8 @@ Recommended additions:
 - Confirm the signed-in n8n Cloud workflow exactly matches the importable
   workflow JSON for Attio writes, reviewer matching, outreach/follow-up tasks
   and stage updates.
+- Activate or correct the n8n production webhook so `paper.submitted` returns
+  `live` from the deployed app.
 - Persist n8n workflow run IDs and poll execution status.
 - Improve SLNG field extraction for arbitrary author submissions beyond the
   hackathon demo records.

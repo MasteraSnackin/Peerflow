@@ -29,7 +29,7 @@ the payload.
 | Attio Agentic CRM | Peerflow creates/updates demo author, institution and follow-up task records through the Attio REST API; n8n import workflow includes Attio write nodes for the live orchestration path. | REST API read/write live; native Attio visual workflow not implemented |
 | Superlinked | Semantic reviewer matching. Paper title, abstract and field plus reviewer expertise, institution and past topics are embedded with `all-MiniLM-L6-v2`, then reranked with `ms-marco-MiniLM-L-6-v2`. With the server-only admin token, Peerflow requests a pinned SIE model pool before matching. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
-| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Published webhook accepts events; importable downstream workflow file contains the orchestration nodes |
+| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Configured, but latest deployed webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Importable downstream workflow file contains the orchestration nodes |
 | SLNG | Author records a submission request; Peerflow sends audio to SLNG STT, then extracts title, field, author, institution and summary for the intake record. | Microphone panel and `/api/slng/intake` route implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
@@ -43,9 +43,10 @@ the payload.
 5. Search open sources with Tavily and show the candidate source.
 6. Click `Run agent`.
 7. Show Peerflow sending one `paper.submitted` event to n8n.
-8. Explain that n8n receives it, calls Attio, calls Superlinked or the Peerflow
-   reviewer-matching backend, creates reviewer outreach/tasks and updates the
-   paper to `Reviewer matched`.
+8. Explain that n8n is the intended owner for Attio calls, Superlinked or
+   Peerflow reviewer matching, reviewer outreach/tasks and the
+   `Reviewer matched` update. If the webhook still returns `404`, show the
+   setup message and workflow JSON instead of claiming a live execution.
 9. Show the n8n result in the agent log.
 10. Open the Aikido report from the integration grid.
 
@@ -67,7 +68,8 @@ the payload.
 - Attio: REST API read/write is live. Demo companies, people and follow-up
   tasks have been created in the Techeurope Hackathon #9 workspace. Native
   Attio visual workflow setup is not implemented. The Attio developer webhook
-  is active and points to the production n8n webhook.
+  has been configured to point to the production n8n webhook, but the current
+  n8n endpoint returns `404` until the workflow is active/corrected.
 - Superlinked: Peerflow reviewer-matching backend is live for n8n to call. It
   uses `all-MiniLM-L6-v2` embeddings and `ms-marco-MiniLM-L-6-v2` reranking so
   reviewer fit is based on research meaning rather than keyword overlap. The
@@ -76,8 +78,9 @@ the payload.
 - SLNG: microphone voice intake is implemented. The app sends recordings to
   `/api/slng/intake`, which calls SLNG STT when configured and returns the
   structured paper record for the agent log.
-- n8n: production webhook accepts `paper.submitted` events. The app sends the
-  n8n orchestration contract in the payload, and
+- n8n: the app sends the n8n orchestration contract in the payload, but the
+  latest deployed production webhook check returned `404`. Activate/publish the
+  workflow or correct the production webhook path before presenting it as live.
   `n8n/peerflow-hackathon-orchestration.json` contains downstream Attio,
   reviewer matching, outreach/task and stage-update nodes. The live n8n canvas
   is recorded at
@@ -92,21 +95,23 @@ If a live provider is slow during judging:
   Gemini is slow.
 - Reviewer previews fall back to local scores.
 - n8n shows an explicit setup/fallback message with a generated run ID.
-- Peerflow sends the event once; n8n owns Attio writes, reviewer matching,
-  outreach/tasks and stage movement in the orchestration path.
+- Peerflow sends the event once; n8n is designed to own Attio writes, reviewer
+  matching, outreach/tasks and stage movement once the production webhook is
+  active.
 
 ## Final Submission Checklist
 
-- [x] Confirm the production n8n webhook accepts `paper.submitted` and returns
-      `live`.
+- [ ] Confirm the production n8n webhook accepts `paper.submitted` and returns
+      `live`; latest deployed check returned `404`.
 - [x] Seed live Attio demo companies, people and follow-up tasks.
-- [x] Point the active Attio webhook at the production n8n webhook.
+- [x] Configure the Attio webhook target to the production n8n webhook.
 - [x] Prepare n8n nodes for Attio writes, reviewer matching, outreach/tasks and
       stage update.
 - [x] Record the live n8n Cloud workflow URL in the app and documentation.
 - [ ] Confirm the signed-in n8n Cloud canvas exactly matches
       `n8n/peerflow-hackathon-orchestration.json`.
-- [ ] Add the deployed public URL once hosting is available.
+- [x] Add the deployed public URL once hosting is available:
+      https://peerflow-agentic-research-crm.vercel.app.
 - [ ] Keep `.env.local` out of Git.
 - [ ] Run `npm run lint`.
 - [ ] Run `npm run build`.

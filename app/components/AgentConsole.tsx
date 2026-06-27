@@ -33,6 +33,11 @@ type N8nTriggerResponse = {
   runId: string | null;
 };
 
+type N8nTriggerResult = {
+  accepted: boolean;
+  source: string;
+};
+
 const stageLabels = [
   "Discovered",
   "Intake parsed",
@@ -78,7 +83,7 @@ export default function AgentConsole({
     ? (liveReviewers ?? reviewers)
     : reviewers.slice(0, 1);
 
-  async function submitPaperToN8n() {
+  async function submitPaperToN8n(): Promise<N8nTriggerResult> {
     try {
       const response = await fetch("/api/n8n/trigger", {
         method: "POST",
@@ -91,11 +96,11 @@ export default function AgentConsole({
       const result = (await response.json()) as N8nTriggerResponse;
       const source = `${result.mode} | ${result.event ?? "paper.submitted"} | ${result.source}`;
       setWorkflowSource(source);
-      return source;
+      return { accepted: result.mode === "live", source };
     } catch {
       const source = "mock | n8n trigger fallback";
       setWorkflowSource(source);
-      return source;
+      return { accepted: false, source };
     }
   }
 
@@ -107,28 +112,35 @@ export default function AgentConsole({
     setMatchSource("waiting for n8n reviewer orchestration");
     setAttioSource("waiting for n8n Attio orchestration");
     setWorkflowSource("waiting for agent run");
+    let n8nAccepted = false;
 
     for (const step of steps) {
       await new Promise((resolve) => setTimeout(resolve, 620));
       let detail = step.detail;
       if (step.id === "submit") {
-        const source = await submitPaperToN8n();
+        const { accepted, source } = await submitPaperToN8n();
+        n8nAccepted = accepted;
         detail = `${step.detail} Outcome: ${source}.`;
       }
       if (step.id === "crm") {
-        const source = "n8n owns Attio create/update from paper.submitted";
+        const source = n8nAccepted
+          ? "n8n owns Attio create/update from paper.submitted"
+          : "planned only; n8n webhook did not accept this run";
         setAttioSource(source);
         detail = `${step.detail} Outcome: ${source}.`;
       }
       if (step.id === "match") {
-        const source =
-          "Superlinked semantic matching: all-MiniLM-L6-v2 embeddings plus ms-marco-MiniLM-L-6-v2 reranking. Not keyword search.";
+        const source = n8nAccepted
+          ? "Superlinked semantic matching: all-MiniLM-L6-v2 embeddings plus ms-marco-MiniLM-L-6-v2 reranking. Not keyword search."
+          : "planned only; n8n has not called reviewer matching for this run";
         setLiveReviewers(reviewers);
         setMatchSource(source);
         detail = `${step.detail} Outcome: ${source}.`;
       }
       if (step.id === "outreach" || step.id === "stage") {
-        const source = "n8n downstream workflow";
+        const source = n8nAccepted
+          ? "n8n downstream workflow"
+          : "planned only; activate n8n production webhook to run this step";
         detail = `${step.detail} Outcome: ${source}.`;
       }
       setCompletedIds((current) => [...current, step.id]);
