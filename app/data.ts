@@ -25,6 +25,11 @@ export type WorkflowStep = {
   detail: string;
 };
 
+export type N8nOrchestrationStep = {
+  title: string;
+  detail: string;
+};
+
 export type IntegrationStatus = {
   service: string;
   purpose: string;
@@ -158,7 +163,7 @@ export const workflowSteps: WorkflowStep[] = [
     title: "Create or update CRM records",
     owner: "n8n -> Attio",
     detail:
-      "n8n creates or updates the author, institution and follow-up task records in Attio, while carrying paper stage in the orchestration payload.",
+      "n8n creates or updates the author and institution records in Attio, while carrying paper stage in the orchestration payload.",
   },
   {
     id: "match",
@@ -187,6 +192,33 @@ export const workflowSteps: WorkflowStep[] = [
     owner: "Aikido",
     detail:
       "Surface the latest repository security status so the build is demo-ready for the side challenge.",
+  },
+];
+
+export const n8nOrchestrationSteps: N8nOrchestrationStep[] = [
+  {
+    title: "Peerflow emits paper.submitted",
+    detail: "Peerflow sends exactly one webhook event for the selected paper.",
+  },
+  {
+    title: "n8n receives the event",
+    detail: "The webhook validates the payload and becomes the workflow owner.",
+  },
+  {
+    title: "n8n calls Attio",
+    detail: "n8n creates or updates author and institution records.",
+  },
+  {
+    title: "n8n gets reviewer matches",
+    detail: "n8n calls Peerflow's Superlinked backend or Superlinked directly.",
+  },
+  {
+    title: "n8n creates outreach",
+    detail: "n8n writes reviewer outreach or follow-up tasks with match scores.",
+  },
+  {
+    title: "n8n updates the paper stage",
+    detail: "The final workflow state is Reviewer matched.",
   },
 ];
 

@@ -29,7 +29,7 @@ the payload.
 | Attio Agentic CRM | Peerflow creates/updates demo author, institution and follow-up task records through the Attio REST API; n8n import workflow includes Attio write nodes for the live orchestration path. | REST API read/write live; native Attio visual workflow not implemented |
 | Superlinked | Semantic matching between paper title, abstract and field, and reviewer expertise, institution and past review topics. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
-| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Published webhook accepts events; importable downstream workflow file is ready |
+| n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Published webhook accepts events; importable downstream workflow file contains the orchestration nodes |
 | SLNG | Author speaks a submission request; SLNG turns it into structured text; Peerflow extracts title, field, author, institution and summary for the intake record. | Key configured; agent log proof shown; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
@@ -43,8 +43,9 @@ the payload.
 5. Search open sources with Tavily and show the candidate source.
 6. Click `Run agent`.
 7. Show Peerflow sending one `paper.submitted` event to n8n.
-8. Explain that n8n owns Attio writes, reviewer matching, outreach/tasks and the
-   `Reviewer matched` stage update.
+8. Explain that n8n receives it, calls Attio, calls Superlinked or the Peerflow
+   reviewer-matching backend, creates reviewer outreach/tasks and updates the
+   paper to `Reviewer matched`.
 9. Show the n8n result in the agent log.
 10. Open the Aikido report from the integration grid.
 
@@ -72,9 +73,10 @@ the payload.
 - SLNG: configured key; the agent log proof is visible as `Voice intake parsed
   by SLNG`, followed by the structured paper record. Real voice endpoint still
   needed.
-- n8n: production workflow is published and accepts `paper.submitted` events.
-  `n8n/peerflow-hackathon-orchestration.json` contains the downstream Attio,
-  reviewer matching, outreach/task and stage-update nodes for import/publish.
+- n8n: production webhook accepts `paper.submitted` events. The app sends the
+  n8n orchestration contract in the payload, and
+  `n8n/peerflow-hackathon-orchestration.json` contains downstream Attio,
+  reviewer matching, outreach/task and stage-update nodes.
 
 ## Backup Plan
 
@@ -83,18 +85,19 @@ If a live provider is slow during judging:
 - Aida falls back to local corpus answers if live retrieval or Gemini is slow.
 - Reviewer previews fall back to local scores.
 - n8n shows an explicit setup/fallback message with a generated run ID.
-- Peerflow does not create Attio records directly; n8n must own those writes.
+- Peerflow sends the event once; n8n owns Attio writes, reviewer matching,
+  outreach/tasks and stage movement in the orchestration path.
 
 ## Final Submission Checklist
 
-- [x] Activate the n8n workflow and confirm the production webhook returns
+- [x] Confirm the production n8n webhook accepts `paper.submitted` and returns
       `live`.
 - [x] Seed live Attio demo companies, people and follow-up tasks.
 - [x] Point the active Attio webhook at the production n8n webhook.
 - [x] Prepare n8n nodes for Attio writes, reviewer matching, outreach/tasks and
       stage update.
-- [ ] Import and publish `n8n/peerflow-hackathon-orchestration.json` in n8n
-      Cloud after signing in.
+- [ ] Confirm the signed-in n8n Cloud canvas exactly matches
+      `n8n/peerflow-hackathon-orchestration.json`.
 - [ ] Add the deployed public URL once hosting is available.
 - [ ] Keep `.env.local` out of Git.
 - [ ] Run `npm run lint`.

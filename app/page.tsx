@@ -3,6 +3,7 @@ import AgentConsole from "./components/AgentConsole";
 import {
   aidaQuestions,
   corpusArticles,
+  n8nOrchestrationSteps,
   papers,
   reviewers,
   workflowSteps,
@@ -149,6 +150,7 @@ export default function Home() {
 
         <AgentConsole
           integrations={integrations}
+          n8nOrchestrationSteps={n8nOrchestrationSteps}
           papers={papers}
           reviewers={reviewers}
           steps={workflowSteps}

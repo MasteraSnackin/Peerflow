@@ -92,12 +92,13 @@ The web app renders the demo surface and calls server-side API routes for model
 work. Aida retrieves live open-access abstracts through OpenAlex, supplements
 them with Tavily extraction when needed, and then asks Gemini to answer only
 from cited evidence. For the agent workflow, Peerflow emits one
-`paper.submitted` webhook to n8n. n8n is the orchestration layer: it should
-create or update Attio records, call Peerflow's Superlinked reviewer-matching
-route or Superlinked directly, create outreach/follow-up tasks and update the
-paper stage to `Reviewer matched`. The current n8n production webhook is
-published and accepts the event payload; the downstream Attio write, reviewer
-matching, outreach/task and stage-update nodes still need to be completed.
+`paper.submitted` webhook to n8n. n8n is the orchestration layer: it receives
+the event, calls Attio to create or update records, calls Peerflow's
+Superlinked reviewer-matching route or Superlinked directly, creates reviewer
+outreach or follow-up tasks, and updates the paper stage to
+`Reviewer matched`. The current n8n production webhook is published and accepts
+the event payload; the repository workflow JSON contains the downstream nodes
+for the full orchestration path.
 SLNG and Aikido are configured through environment variables so live services
 can be plugged in without exposing credentials to the browser.
 
@@ -106,7 +107,7 @@ can be plugged in without exposing credentials to the browser.
 | Service | How Peerflow uses it | Current status |
 | --- | --- | --- |
 | Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
-| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes are in `n8n/peerflow-hackathon-orchestration.json`; the cloud workflow still needs sign-in/import/publish. |
+| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic matching between paper profiles and reviewer expertise profiles. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
@@ -380,10 +381,17 @@ listening; use `Execute workflow` in n8n or switch to the production
 `/webhook/...` URL from an activated workflow.
 
 The published Peerflow n8n webhook currently proves payload acceptance. The
-workflow import file adds downstream nodes for Attio upserts, reviewer matching,
-outreach/follow-up tasks and the final `Reviewer matched` stage update. The
-cloud workflow still needs to be re-imported and published from a signed-in n8n
-session.
+workflow import file defines the downstream orchestration path:
+
+1. Receive one `paper.submitted` webhook event from Peerflow.
+2. Call Attio to create or update institution and author records.
+3. Call Peerflow's `/api/superlinked/match-reviewers` backend, or Superlinked
+   directly, to get reviewer matches.
+4. Create an Attio reviewer outreach or follow-up task with the match scores.
+5. Return the final paper stage as `Reviewer matched`.
+
+Unknown: the repository can verify the importable workflow JSON, but the exact
+n8n Cloud canvas still has to match this JSON in the signed-in workspace.
 
 Request:
 

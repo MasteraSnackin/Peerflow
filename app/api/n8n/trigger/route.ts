@@ -1,4 +1,4 @@
-import { papers } from "../../../data";
+import { n8nOrchestrationSteps, papers } from "../../../data";
 
 type N8nTriggerPayload = {
   event?: string;
@@ -134,12 +134,16 @@ export async function POST(request: Request) {
       owner: "n8n",
       currentStage: "Submitted",
       targetStage: "Reviewer matched",
+      contract: n8nOrchestrationSteps.map((step, index) => ({
+        order: index + 1,
+        title: step.title,
+        detail: step.detail,
+      })),
       requiredActions: [
-        "attio.upsert_author",
         "attio.upsert_institution",
-        "attio.create_follow_up_task",
+        "attio.upsert_author",
         "superlinked.match_reviewers",
-        "reviewer.outreach_or_follow_up_task",
+        "attio.create_reviewer_outreach_task",
         "paper.stage.update_reviewer_matched",
       ],
       backend: {

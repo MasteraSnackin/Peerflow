@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type {
   IntegrationStatus,
+  N8nOrchestrationStep,
   Paper,
   Reviewer,
   WorkflowStep,
@@ -13,6 +14,7 @@ type AgentConsoleProps = {
   reviewers: Reviewer[];
   steps: WorkflowStep[];
   integrations: IntegrationStatus[];
+  n8nOrchestrationSteps: N8nOrchestrationStep[];
 };
 
 type LogEntry = {
@@ -46,6 +48,7 @@ export default function AgentConsole({
   reviewers,
   steps,
   integrations,
+  n8nOrchestrationSteps,
 }: AgentConsoleProps) {
   const [selectedPaperId, setSelectedPaperId] = useState(papers[0].id);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -348,6 +351,34 @@ export default function AgentConsole({
                 </div>
                 <div className="text-right text-lg font-semibold text-[#19a886]">
                   {reviewer.fit}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#243632]">
+              n8n orchestration
+            </p>
+            <span className="rounded-md bg-[#edf2ef] px-2 py-1 text-xs font-semibold text-[#55716a]">
+              one event in
+            </span>
+          </div>
+          <div className="mt-3 divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
+            {n8nOrchestrationSteps.map((step, index) => (
+              <div className="grid grid-cols-[28px_1fr] gap-3 py-3" key={step.title}>
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#edf2ef] text-xs font-semibold text-[#55716a]">
+                  {index + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#243632]">
+                    {step.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[#60706c]">
+                    {step.detail}
+                  </p>
                 </div>
               </div>
             ))}

@@ -15,8 +15,9 @@ webhook calls are enabled when the required environment variables are present.
 The n8n production webhook is published and accepts `paper.submitted` payloads.
 The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
-outreach/task and stage-update nodes. The cloud workflow still needs a signed-in
-n8n session to import and publish that file. The Aikido report URL is shown as
+outreach/task and stage-update nodes. The remaining n8n verification is to
+confirm the signed-in n8n Cloud canvas exactly matches that file. The Aikido
+report URL is shown as
 external security evidence. SLNG is represented in the UI, agent log and
 environment model, but the repository does not yet contain a production
 voice-intake endpoint.
@@ -290,16 +291,18 @@ scaffolded infrastructure, but no application data is currently persisted there.
 4. On the submission step, the browser posts the selected paper ID to
    `/api/n8n/trigger`.
 5. The server route builds a `paper.submitted` event with paper metadata, Attio
-   record previews, n8n required actions and a reviewer-matching callback URL.
+   record previews, an n8n orchestration contract and a reviewer-matching
+   callback URL.
 6. n8n receives the event and owns the downstream workflow.
-7. Current cloud state: the published workflow accepts the webhook payload.
-8. Prepared import workflow: create or update Attio author and institution demo
-   records using the same payload shapes proven by `npm run attio:seed`.
-9. Prepared import workflow: call `/api/superlinked/match-reviewers` through
-   the callback URL in the payload to get top 3 semantic reviewer matches.
-10. Prepared import workflow: create a reviewer outreach task payload that
-   carries those matches into Attio.
-11. Prepared import workflow: update the paper stage to `Reviewer matched`.
+7. n8n calls Attio to create or update author and institution demo records
+   using the same payload shapes proven by `npm run attio:seed`.
+8. n8n calls `/api/superlinked/match-reviewers` through the callback URL in the
+   payload, or Superlinked directly, to get top 3 semantic reviewer matches.
+9. n8n creates a reviewer outreach or follow-up task payload that carries those
+   matches into Attio.
+10. n8n updates the paper stage to `Reviewer matched`.
+11. Current verifiable state: the production webhook accepts the payload and
+    the importable workflow JSON contains these downstream nodes.
 12. The browser renders the n8n trigger status, planned reviewer preview and
     Attio-style record preview.
 
@@ -486,8 +489,9 @@ Recommended additions:
 
 ## Future Improvements
 
-- Build and publish the full n8n workflow for Attio writes, reviewer matching,
-  outreach/follow-up tasks and stage updates.
+- Confirm the signed-in n8n Cloud workflow exactly matches the importable
+  workflow JSON for Attio writes, reviewer matching, outreach/follow-up tasks
+  and stage updates.
 - Persist n8n workflow run IDs and poll execution status.
 - Add the production SLNG voice capture endpoint behind the existing structured
   intake proof shown in the agent log.
