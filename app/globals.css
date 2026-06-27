@@ -22,3 +22,8 @@ body {
 * {
   box-sizing: border-box;
 }
+
+button:focus-visible {
+  outline: 3px solid #0f8f73;
+  outline-offset: 3px;
+}

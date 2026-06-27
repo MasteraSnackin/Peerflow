@@ -28,7 +28,8 @@ export type IntegrationStatus = {
   service: string;
   purpose: string;
   keys: string[];
-  connected: boolean;
+  configured: boolean;
+  statusLabel: string;
 };
 
 export type CorpusArticle = {
@@ -126,10 +127,10 @@ export const workflowSteps: WorkflowStep[] = [
   },
   {
     id: "crm",
-    title: "Create research CRM records",
+    title: "Validate research CRM workspace",
     owner: "Attio",
     detail:
-      "Create author, institution, paper and review pipeline records, then log the agent decision trail.",
+      "Confirm the Attio workspace is reachable, then prepare the author, institution, paper and review-stage record preview.",
   },
   {
     id: "match",

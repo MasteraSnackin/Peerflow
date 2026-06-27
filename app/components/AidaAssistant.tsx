@@ -118,7 +118,10 @@ export default function AidaAssistant({
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
+      <div
+        aria-live="polite"
+        className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm"
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase text-[#55716a]">

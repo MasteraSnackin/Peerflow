@@ -38,10 +38,10 @@ legal open-access metadata, abstracts and authorised links.
 
 - Paper intake for legitimate open-access research sources.
 - Attio-centred CRM workflow for authors, institutions, papers and review
-  stages.
+  stages, with live workspace validation when configured.
 - Superlinked SIE reviewer matching using open-source reranking.
 - Aida, a corpus-grounded assistant with a no-citation, no-claim rule.
-- n8n webhook configuration for workflow orchestration.
+- n8n webhook triggering during the agent workflow when configured.
 - SLNG and Aikido readiness indicators for the hackathon side challenges.
 - Mock-first demo data so the product works without live credentials.
 - Server-side API routes that keep API keys out of the browser.
@@ -77,9 +77,10 @@ flowchart LR
 
 The web app renders the demo surface and calls server-side API routes for model
 work. Aida answers from cited corpus snippets through the Gemini-backed route,
-while reviewer matching is reranked through Superlinked SIE. n8n, Attio, SLNG
-and Aikido are configured through environment variables so live services can be
-plugged in without exposing credentials to the browser.
+while reviewer matching is reranked through Superlinked SIE. Attio is validated
+through a read-only server route, and n8n can receive the workflow payload from
+the agent run. SLNG and Aikido are configured through environment variables so
+live services can be plugged in without exposing credentials to the browser.
 
 ## Installation
 
@@ -122,8 +123,10 @@ Typical demo flow:
 2. Ask Aida a supported research question and show the cited evidence trace.
 3. Ask Aida an unsupported question and show the refusal behaviour.
 4. Click `Run agent`.
-5. Show Superlinked reviewer matching and the Attio-style pipeline state.
-6. Explain how n8n, SLNG and Aikido fit into the workflow once connected.
+5. Show Attio workspace validation, Superlinked reviewer matching and the
+   Attio-style pipeline state.
+6. Show the n8n workflow trigger result in the agent log.
+7. Explain how SLNG and Aikido fit into the workflow once connected.
 
 ## Configuration
 
@@ -156,9 +159,9 @@ Environment variable notes:
 
 | Variable | Purpose |
 | --- | --- |
-| `ATTIO_API_KEY` | Future Attio CRM write access. |
+| `ATTIO_API_KEY` | Attio API key for workspace validation and future CRM writes. |
 | `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
-| `N8N_WEBHOOK_URL` | n8n webhook for workflow orchestration. |
+| `N8N_WEBHOOK_URL` | n8n webhook triggered during the agent workflow. |
 | `SLNG_API_KEY` | SLNG voice intake integration. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
@@ -257,6 +260,54 @@ Response:
 }
 ```
 
+### `GET /api/attio/status`
+
+Validates that the configured Attio key can read workspace objects. This is a
+read-only check; it does not create CRM records.
+
+Response:
+
+```json
+{
+  "mode": "live",
+  "source": "2 Attio objects available",
+  "objects": ["companies", "people"]
+}
+```
+
+### `POST /api/n8n/trigger`
+
+Sends the selected paper and reviewer matches to the configured n8n webhook.
+If the webhook is missing or unavailable, the route returns a mock/fallback
+result so the demo flow can continue.
+
+Request:
+
+```json
+{
+  "paperId": "paper-01",
+  "stage": "reviewer-matched",
+  "reviewers": [
+    {
+      "name": "Amara Osei",
+      "institution": "Imperial College London",
+      "speciality": "Clinical retrieval",
+      "fit": 96
+    }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "mode": "live",
+  "source": "n8n webhook accepted workflow payload",
+  "runId": "00000000-0000-4000-8000-000000000000"
+}
+```
+
 ## Tests
 
 There is no dedicated test suite yet.
@@ -275,7 +326,7 @@ fixes may change framework dependencies shortly before the demo.
 ## Roadmap
 
 - Write real Attio records for authors, institutions, papers and review tasks.
-- Trigger n8n workflow runs from the agent flow.
+- Promote the n8n trigger from demo payloads to durable workflow run tracking.
 - Add SLNG voice recording and transcript parsing.
 - Replace mock corpus snippets with a real vector index.
 - Attach Aikido scan evidence inside the app.

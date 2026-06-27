@@ -8,10 +8,10 @@ open-access intake through author follow-up, reviewer matching, workflow
 orchestration and research Q&A.
 
 The current implementation is a polished judge-facing MVP. It runs with static
-mock data by default and enables live Gemini and Superlinked SIE calls when the
-required environment variables are present. Attio, n8n, SLNG and Aikido are
-represented in the UI and environment model, but the repository does not yet
-contain production write flows for those services.
+mock data by default and enables live Gemini, Superlinked SIE, Attio validation
+and n8n webhook calls when the required environment variables are present. SLNG
+and Aikido are represented in the UI and environment model, but the repository
+does not yet contain production flows for those services.
 
 Peerflow is not a Sci-Hub clone. Its intended boundary is legal open-access
 metadata, abstracts and authorised links.
@@ -38,12 +38,14 @@ flowchart LR
   Browser --> App[vinext and Next app]
   App --> AidaRoute[/POST /api/aida/]
   App --> MatchRoute[/POST /api/superlinked/match-reviewers/]
+  App --> AttioRoute[/GET /api/attio/status/]
+  App --> N8nRoute[/POST /api/n8n/trigger/]
   App --> StaticData[(Static demo data)]
   AidaRoute --> Corpus[(Mock corpus snippets)]
   AidaRoute --> Gemini[Gemini API]
   MatchRoute --> SIE[Superlinked SIE]
-  App -. planned .-> Attio[Attio CRM]
-  App -. planned .-> N8N[n8n webhook]
+  AttioRoute --> Attio[Attio CRM]
+  N8nRoute --> N8N[n8n webhook]
   App -. planned .-> SLNG[SLNG voice intake]
   App -. planned .-> Aikido[Aikido security report]
   App -. optional scaffold .-> D1[(Cloudflare D1)]
@@ -76,12 +78,14 @@ infrastructure, but no application data is currently persisted there.
 
 - Responsibilities: provide the interactive "Run agent" workflow, simulate
   paper intake stages, display an Attio-style record preview, call reviewer
-  matching and show an in-session agent log.
+  matching, validate the Attio workspace, trigger n8n orchestration and show an
+  in-session agent log.
 - Main technologies: React client component with local component state and
   browser `fetch`.
 - Data owned or transformed: selected paper ID, completed workflow step IDs,
   reviewer match results and transient log entries.
-- External dependencies: calls `POST /api/superlinked/match-reviewers`.
+- External dependencies: calls `GET /api/attio/status`,
+  `POST /api/superlinked/match-reviewers` and `POST /api/n8n/trigger`.
 - Failure modes or operational concerns: the log and stage state are not
   persisted. Refreshing the page loses the run history.
 
@@ -127,6 +131,33 @@ infrastructure, but no application data is currently persisted there.
   timeout or scoring errors return mock reviewer matches. The client labels
   whether the source was live or mock.
 
+### Attio Status API Route
+
+- Responsibilities: validate that the configured Attio API key can read the
+  workspace object configuration.
+- Main technologies: Next-style `GET` route, TypeScript and server-side
+  `fetch`.
+- Data owned or transformed: Attio object names such as `companies` and
+  `people`, returned as a small status payload.
+- External dependencies: Attio API via `ATTIO_API_KEY` and
+  `ATTIO_WORKSPACE_ID`.
+- Failure modes or operational concerns: this route is intentionally read-only.
+  It does not create CRM records yet. Missing or invalid credentials return a
+  mock/fallback status.
+
+### n8n Trigger API Route
+
+- Responsibilities: send the selected paper, current workflow stage and reviewer
+  matches to the configured n8n webhook.
+- Main technologies: Next-style `POST` route, TypeScript and server-side
+  `fetch`.
+- Data owned or transformed: selected paper metadata, reviewer match summaries
+  and generated run ID.
+- External dependencies: `N8N_WEBHOOK_URL`.
+- Failure modes or operational concerns: test webhooks may return `404` unless
+  the n8n workflow is actively listening. The route returns a mock/fallback
+  status rather than blocking the demo.
+
 ### Static Demo Data
 
 - Responsibilities: provide demo papers, reviewer candidates, workflow steps,
@@ -170,13 +201,18 @@ infrastructure, but no application data is currently persisted there.
    entries.
 2. The browser runs the local agent sequence in `AgentConsole`.
 3. For each step, the UI marks progress and writes a transient log entry.
-4. On the reviewer matching step, the browser posts the paper ID to
+4. On the CRM step, the browser calls `/api/attio/status` to validate the
+   configured Attio workspace without creating records.
+5. On the reviewer matching step, the browser posts the paper ID to
    `/api/superlinked/match-reviewers`.
-5. The server route builds text profiles for the paper and reviewers.
-6. If SIE credentials are present, the route calls Superlinked SIE and
+6. The server route builds text profiles for the paper and reviewers.
+7. If SIE credentials are present, the route calls Superlinked SIE and
    normalises the scores.
-7. If SIE is unavailable, the route returns the mock reviewer list.
-8. The browser renders reviewer matches and the Attio-style record preview.
+8. If SIE is unavailable, the route returns the mock reviewer list.
+9. On the workflow step, the browser posts the paper and reviewer summary to
+   `/api/n8n/trigger`.
+10. The browser renders reviewer matches, Attio validation status, n8n trigger
+    status and the Attio-style record preview.
 
 ### Aida Q&A Flow
 
@@ -237,10 +273,10 @@ Limits and risks:
 - External AI and SIE calls are synchronous request-response operations.
 - Gemini and SIE failures are hidden behind mock fallbacks, so production
   monitoring would need clearer error reporting.
-- n8n orchestration is configured as an environment variable but is not yet
-  invoked by the app.
-- Attio record creation is represented in UI copy, not implemented as a write
-  integration.
+- n8n orchestration is triggered during the agent run, but there is no durable
+  run-status polling or retry mechanism yet.
+- Attio record creation is not implemented as a write integration. The current
+  app previews the record shape and uses a read-only Attio validation route.
 
 Future scale should introduce a durable store, explicit job status, retries,
 provider timeouts, idempotency keys and persisted audit logs.
@@ -259,13 +295,17 @@ display secret values. `.env.local` must remain uncommitted.
 
 ### Client and Server Trust Boundary
 
-The browser can call two server routes:
+The browser can call four server routes:
 
 - `POST /api/aida`
+- `GET /api/attio/status`
+- `POST /api/n8n/trigger`
 - `POST /api/superlinked/match-reviewers`
 
-The client controls only `questionId` and `paperId`. The server selects data
-from known static lists and keeps provider credentials server-side.
+The client controls `questionId`, `paperId`, n8n stage text and reviewer
+summaries. The server selects papers from known static lists, keeps provider
+credentials server-side and treats all client-provided workflow payload fields
+as demo data rather than trusted CRM records.
 
 ### Authentication and Authorisation
 

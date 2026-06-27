@@ -53,22 +53,28 @@ const integrationDefinitions = [
 function getIntegrationStatus() {
   return integrationDefinitions.map((integration) => ({
     ...integration,
-    connected: (
+    configured: (
       integration.requiredKeyGroups ??
       integration.keys.map((key) => [key])
     ).every((group) => group.some((key) => Boolean(process.env[key]))),
+    statusLabel: (
+      integration.requiredKeyGroups ??
+      integration.keys.map((key) => [key])
+    ).every((group) => group.some((key) => Boolean(process.env[key])))
+      ? "Configured"
+      : "Needs setup",
   }));
 }
 
 export default function Home() {
   const integrations = getIntegrationStatus();
-  const connectedCount = integrations.filter(
-    (integration) => integration.connected,
+  const configuredCount = integrations.filter(
+    (integration) => integration.configured,
   ).length;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f7f8f6] text-[#17211f]">
-      <div className="mx-0 flex min-h-screen max-w-[390px] flex-col gap-5 px-5 py-5 sm:mx-auto sm:max-w-7xl sm:px-8 lg:px-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-5 py-5 sm:px-8 lg:px-10">
         <header className="flex flex-col items-start justify-between gap-4 border-b border-[#d7ded9] pb-4 sm:flex-row sm:items-center">
           <div>
             <p className="text-xs font-semibold uppercase text-[#55716a]">
@@ -117,9 +123,9 @@ export default function Home() {
               </p>
             </article>
             <article className="min-h-[132px] rounded-lg border border-[#d9e1dd] bg-white p-4 shadow-sm">
-              <p className="text-3xl font-semibold">{connectedCount}/6</p>
+              <p className="text-3xl font-semibold">{configuredCount}/6</p>
               <p className="mt-2 text-sm leading-6 text-[#60706c]">
-                integrations ready from environment variables
+                integrations configured from environment variables
               </p>
             </article>
           </div>

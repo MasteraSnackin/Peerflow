@@ -27,6 +27,18 @@ type ReviewerMatchResponse = {
   source: string;
 };
 
+type AttioStatusResponse = {
+  mode: "live" | "mock";
+  source: string;
+  objects: string[];
+};
+
+type N8nTriggerResponse = {
+  mode: "live" | "mock";
+  source: string;
+  runId: string | null;
+};
+
 const stageLabels = [
   "Discovered",
   "Author contacted",
@@ -46,6 +58,8 @@ export default function AgentConsole({
   const [isRunning, setIsRunning] = useState(false);
   const [liveReviewers, setLiveReviewers] = useState<Reviewer[] | null>(null);
   const [matchSource, setMatchSource] = useState("local mock scores");
+  const [attioSource, setAttioSource] = useState("local record preview");
+  const [workflowSource, setWorkflowSource] = useState("waiting for agent run");
 
   const selectedPaper =
     papers.find((paper) => paper.id === selectedPaperId) ?? papers[0];
@@ -58,6 +72,20 @@ export default function AgentConsole({
     ? (liveReviewers ?? reviewers)
     : reviewers.slice(0, 1);
 
+  async function validateAttio() {
+    try {
+      const response = await fetch("/api/attio/status");
+      const result = (await response.json()) as AttioStatusResponse;
+      const source = `${result.mode} | ${result.source}`;
+      setAttioSource(source);
+      return source;
+    } catch {
+      const source = "mock | Attio validation fallback";
+      setAttioSource(source);
+      return source;
+    }
+  }
+
   async function matchWithSuperlinked() {
     try {
       const response = await fetch("/api/superlinked/match-reviewers", {
@@ -67,10 +95,36 @@ export default function AgentConsole({
       });
       const result = (await response.json()) as ReviewerMatchResponse;
       setLiveReviewers(result.matches);
-      setMatchSource(`${result.mode} | ${result.source}`);
+      const source = `${result.mode} | ${result.source}`;
+      setMatchSource(source);
+      return { matches: result.matches, source };
     } catch {
+      const source = "mock | local fallback";
       setLiveReviewers(reviewers);
-      setMatchSource("mock | local fallback");
+      setMatchSource(source);
+      return { matches: reviewers, source };
+    }
+  }
+
+  async function triggerN8nWorkflow(workflowReviewers: Reviewer[]) {
+    try {
+      const response = await fetch("/api/n8n/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paperId: selectedPaper.id,
+          stage: "reviewer-matched",
+          reviewers: workflowReviewers,
+        }),
+      });
+      const result = (await response.json()) as N8nTriggerResponse;
+      const source = `${result.mode} | ${result.source}`;
+      setWorkflowSource(source);
+      return source;
+    } catch {
+      const source = "mock | n8n trigger fallback";
+      setWorkflowSource(source);
+      return source;
     }
   }
 
@@ -80,18 +134,32 @@ export default function AgentConsole({
     setLog([]);
     setLiveReviewers(null);
     setMatchSource("local mock scores");
+    setAttioSource("local record preview");
+    setWorkflowSource("waiting for agent run");
+    let workflowReviewers = reviewers;
 
     for (const step of steps) {
       await new Promise((resolve) => setTimeout(resolve, 620));
+      let detail = step.detail;
+      if (step.id === "crm") {
+        const source = await validateAttio();
+        detail = `${step.detail} Outcome: ${source}.`;
+      }
       if (step.id === "match") {
-        await matchWithSuperlinked();
+        const result = await matchWithSuperlinked();
+        workflowReviewers = result.matches;
+        detail = `${step.detail} Outcome: ${result.source}.`;
+      }
+      if (step.id === "workflow") {
+        const source = await triggerN8nWorkflow(workflowReviewers);
+        detail = `${step.detail} Outcome: ${source}.`;
       }
       setCompletedIds((current) => [...current, step.id]);
       setLog((current) => [
         {
           id: step.id,
           label: step.title,
-          detail: step.detail,
+          detail,
         },
         ...current,
       ]);
@@ -106,6 +174,8 @@ export default function AgentConsole({
     setIsRunning(false);
     setLiveReviewers(null);
     setMatchSource("local mock scores");
+    setAttioSource("local record preview");
+    setWorkflowSource("waiting for agent run");
   }
 
   return (
@@ -120,7 +190,7 @@ export default function AgentConsole({
               Turn a legitimate open-access paper into a reviewer-ready Attio
               pipeline.
             </h2>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 className="rounded-md bg-[#17211f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b3b37] disabled:cursor-not-allowed disabled:bg-[#6d7b77]"
                 disabled={isRunning}
@@ -138,13 +208,23 @@ export default function AgentConsole({
               </button>
             </div>
           </div>
-          <div className="mt-5 h-2 bg-[#e5ebe8]">
+          <div
+            aria-label="Agent run progress"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={progress}
+            className="mt-5 h-2 bg-[#e5ebe8]"
+            role="progressbar"
+          >
             <div
               className="h-2 bg-[#19a886] transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-xs font-medium text-[#60706c]">
+          <div
+            aria-live="polite"
+            className="mt-2 flex items-center justify-between text-xs font-medium text-[#60706c]"
+          >
             <span>{currentStage}</span>
             <span>{progress}% complete</span>
           </div>
@@ -248,6 +328,9 @@ export default function AgentConsole({
           <p className="mt-5 text-sm leading-6 text-[#dce7e3]">
             {selectedPaper.abstract}
           </p>
+          <p className="mt-4 text-xs font-medium text-[#9fb3ad]">
+            Attio: {attioSource}
+          </p>
         </div>
 
         <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
@@ -288,7 +371,12 @@ export default function AgentConsole({
         </div>
 
         <div className="rounded-lg border border-[#d7ded9] bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-[#243632]">Agent log</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#243632]">Agent log</p>
+            <span className="text-xs font-medium text-[#60706c]">
+              n8n: {workflowSource}
+            </span>
+          </div>
           <div className="mt-3 min-h-[156px] divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
             {log.length === 0 ? (
               <p className="py-4 text-sm leading-6 text-[#60706c]">
@@ -321,7 +409,7 @@ export default function AgentConsole({
             </h3>
           </div>
           <span className="rounded-md bg-[#edf2ef] px-3 py-2 text-xs font-semibold text-[#31443f]">
-            Mock mode until keys are present
+            Live execution is shown inside each workflow step
           </span>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -336,12 +424,12 @@ export default function AgentConsole({
                 </h4>
                 <span
                   className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                    integration.connected
+                    integration.configured
                       ? "bg-[#dff6ee] text-[#11775f]"
                       : "bg-[#fff0d8] text-[#8a5b11]"
                   }`}
                 >
-                  {integration.connected ? "Live" : "Mock"}
+                  {integration.statusLabel}
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-[#60706c]">
