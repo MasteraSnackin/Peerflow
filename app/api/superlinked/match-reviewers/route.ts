@@ -5,6 +5,7 @@ type ReviewerMatch = {
   name: string;
   institution: string;
   speciality: string;
+  pastTopics: string[];
   fit: number;
   availability: string;
   rawScore?: number;
@@ -263,19 +264,18 @@ export async function POST(request: Request) {
     const rawScores = result.scores.map((entry) => entry.score);
     const minScore = Math.min(...rawScores);
     const maxScore = Math.max(...rawScores);
-    const matches = result.scores
-      .map((entry) => {
+    const matches: ReviewerMatch[] = result.scores
+      .flatMap((entry) => {
         const reviewer = reviewers[Number(entry.itemId)];
         if (!reviewer) {
-          return null;
+          return [];
         }
-        return {
+        return [{
           ...reviewer,
           fit: scoreToFit(entry.score, minScore, maxScore),
           rawScore: Number(entry.score.toFixed(4)),
-        };
-      })
-      .filter((match): match is ReviewerMatch => Boolean(match));
+        }];
+      });
 
     return Response.json({
       matches: matches.length > 0 ? matches : reviewers,
