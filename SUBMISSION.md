@@ -30,7 +30,7 @@ the payload.
 | Superlinked | n8n should call Peerflow's reviewer-matching backend or Superlinked directly. | Backend route live |
 | Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach and stage update. | Published webhook accepts events; importable downstream workflow file is ready |
-| SLNG | Planned voice intake for author submission briefs. | Key configured; endpoint not implemented |
+| SLNG | Author speaks a submission request; SLNG turns it into structured text; Peerflow extracts title, field, author, institution and summary for the intake record. | Key configured; agent log proof shown; endpoint not implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
 | Aida | Gemini-backed assistant using live OpenAlex/Tavily corpus retrieval, citation validation and refusal behaviour. | Live |
 
@@ -69,7 +69,9 @@ the payload.
   is active and points to the production n8n webhook.
 - Superlinked: Peerflow reviewer-matching backend is live for n8n to call.
 - Aikido: configured report link.
-- SLNG: configured key; real API endpoint still needed.
+- SLNG: configured key; the agent log proof is visible as `Voice intake parsed
+  by SLNG`, followed by the structured paper record. Real voice endpoint still
+  needed.
 - n8n: production workflow is published and accepts `paper.submitted` events.
   `n8n/peerflow-hackathon-orchestration.json` contains the downstream Attio,
   reviewer matching, outreach/task and stage-update nodes for import/publish.

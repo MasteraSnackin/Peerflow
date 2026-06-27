@@ -12,7 +12,7 @@ reviewer matching and follow-up.
 | n8n | Orchestration layer. Peerflow sends one `paper.submitted` event to n8n, then n8n owns CRM writes, reviewer matching, outreach and stage updates. | Production webhook returns `200` and starts the workflow. Importable workflow file: `n8n/peerflow-hackathon-orchestration.json`. |
 | Superlinked | Reviewer matching. n8n can call Peerflow's `/api/superlinked/match-reviewers` backend route, which uses Superlinked SIE when configured. | Backend route is implemented with visible live/mock source reporting. |
 | Tavily | Open-access source discovery and extraction for Aida's live corpus. | `/api/tavily/discover` searches allowed open-access-friendly domains and extracts source snippets. |
-| SLNG | Voice intake path for author submission briefs. | Environment setup and UI flow are present. Production voice capture is still a planned step. |
+| SLNG | Author voice intake. In Peerflow, the author says, "I want to submit a paper about clinical AI retrieval"; SLNG turns that into structured text; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the Attio record preview. Production voice capture is still a planned step. |
 | Aikido | Security evidence for the side challenge. | The app links to the configured Aikido audit report from the integration readiness grid. |
 | Aida / Gemini | Corpus-grounded research assistant. | Aida retrieves OpenAlex/Tavily evidence, validates citations and refuses unsupported patient-specific treatment advice. |
 
@@ -52,6 +52,14 @@ SLNG, Superlinked, Tavily, Aikido and Aida.
 This screenshot shows the agent workflow surface where Peerflow submits a paper
 once, then hands off CRM, reviewer matching and outreach orchestration to n8n.
 
+### SLNG Intake Proof
+
+![Peerflow SLNG intake proof](docs/assets/peerflow-slng-intake-proof.png)
+
+This screenshot shows the proof judges asked for in the agent log:
+`Voice intake parsed by SLNG`. The Agent Workflow screenshot above shows the
+structured paper record with title, author, institution, field and summary.
+
 ### Full Demo Page
 
 ![Peerflow full demo page](docs/assets/peerflow-full-demo.png)
@@ -76,7 +84,8 @@ workflow and integration readiness together.
 - There is no custom Attio `paper` object yet. Paper stage is carried in the
   orchestration payload rather than stored as a native Attio paper record.
 - Native Attio visual Workflow/Sequence setup is not implemented.
-- SLNG voice capture is represented in the product flow and configuration
-  model, but the production voice-intake endpoint is not implemented yet.
+- SLNG voice capture is represented in the product flow, configuration model
+  and agent log proof, but the production voice-intake endpoint is not
+  implemented yet.
 - `PEERFLOW_PUBLIC_URL` is still needed for n8n Cloud to call the local
   reviewer-matching backend outside localhost.

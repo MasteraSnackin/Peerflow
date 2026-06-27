@@ -125,10 +125,10 @@ export const workflowSteps: WorkflowStep[] = [
   },
   {
     id: "voice",
-    title: "Parse voice or text intake",
+    title: "Voice intake parsed by SLNG",
     owner: "SLNG",
     detail:
-      "Convert author intent into a structured submission brief with paper title, field and contact details.",
+      'Author says, "I want to submit a paper about clinical AI retrieval." SLNG turns that into structured text, then Peerflow extracts title, field, author, institution and summary for the paper intake record.',
   },
   {
     id: "submit",

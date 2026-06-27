@@ -17,8 +17,9 @@ The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
 outreach/task and stage-update nodes. The cloud workflow still needs a signed-in
 n8n session to import and publish that file. The Aikido report URL is shown as
-external security evidence. SLNG is represented in the UI and environment
-model, but the repository does not yet contain a production voice-intake flow.
+external security evidence. SLNG is represented in the UI, agent log and
+environment model, but the repository does not yet contain a production
+voice-intake endpoint.
 
 Peerflow is not a Sci-Hub clone. Its intended boundary is legal open-access
 metadata, abstracts and authorised links.
@@ -486,7 +487,8 @@ Recommended additions:
 - Build and publish the full n8n workflow for Attio writes, reviewer matching,
   outreach/follow-up tasks and stage updates.
 - Persist n8n workflow run IDs and poll execution status.
-- Add SLNG voice capture, transcription and structured intake parsing.
+- Add the production SLNG voice capture endpoint behind the existing structured
+  intake proof shown in the agent log.
 - Persist live Aida corpus results and add a legal open-access ingestion/vector
   retrieval pipeline.
 - Persist Aida answer traces, reviewer match decisions and agent workflow logs.

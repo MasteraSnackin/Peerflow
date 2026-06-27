@@ -31,7 +31,8 @@ const integrationDefinitions = [
   {
     service: "SLNG",
     keys: ["SLNG_API_KEY"],
-    purpose: "Capture voice intake and convert it into a submission brief.",
+    purpose:
+      "Turn spoken author intent into structured paper intake text for Peerflow.",
   },
   {
     service: "Superlinked",

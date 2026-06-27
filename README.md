@@ -110,7 +110,7 @@ can be plugged in without exposing credentials to the browser.
 | Superlinked | Reviewer matching through SIE reranking. | Backend route is ready for n8n to call; it uses SIE when endpoint/key are configured and falls back visibly otherwise. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
-| SLNG | Planned voice intake for author submission briefs. | API key can be configured, but no production voice-intake route is implemented yet. |
+| SLNG | Voice intake for author submission briefs. | The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible. Production voice capture is still planned. |
 | Aikido | Security evidence link for judges. | Report URL is shown in the integration grid when configured. |
 
 ## Installation
@@ -163,7 +163,9 @@ Typical demo flow:
 8. Open `n8n/peerflow-hackathon-orchestration.json` if judges ask to inspect
    the workflow structure.
 9. Open the Aikido security report from the integration grid.
-10. Explain how SLNG voice intake fits into the workflow once connected.
+10. Explain the SLNG proof: author speaks, SLNG turns the request into
+    structured text, and Peerflow extracts title, field, author, institution
+    and summary for the paper intake record.
 
 ## Configuration
 
@@ -203,7 +205,7 @@ Environment variable notes:
 | `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
 | `N8N_WEBHOOK_URL` | n8n production webhook that receives `paper.submitted`. |
 | `PEERFLOW_PUBLIC_URL` | Optional deployed or tunnelled base URL so n8n Cloud can call Peerflow backend routes. |
-| `SLNG_API_KEY` | SLNG voice intake integration. |
+| `SLNG_API_KEY` | SLNG voice intake integration for structured paper intake. |
 | `SUPERLINKED_ENDPOINT` | SIE cluster endpoint. |
 | `SUPERLINKED_API_KEY` | SIE authentication key. |
 | `SUPERLINKED_RERANK_MODEL` | Reviewer reranking model. |
