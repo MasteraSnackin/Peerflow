@@ -139,7 +139,7 @@ export default function Home() {
             <article className="min-h-[132px] rounded-lg border border-[#d9e1dd] bg-white p-4 shadow-sm">
               <p className="text-3xl font-semibold">{papers.length}</p>
               <p className="mt-2 text-sm leading-6 text-[#60706c]">
-                open-access sources in the demo queue
+                sample paper records in the demo queue
               </p>
             </article>
             <article className="min-h-[132px] rounded-lg border border-[#d9e1dd] bg-white p-4 shadow-sm">

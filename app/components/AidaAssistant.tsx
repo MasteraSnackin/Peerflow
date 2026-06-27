@@ -29,7 +29,7 @@ type CorpusSearch = {
 };
 
 type TavilyDiscovery = {
-  mode: "live" | "mock";
+  mode: "live" | "empty";
   source: string;
   query: string;
   result: {
@@ -143,8 +143,8 @@ export default function AidaAssistant({ questions }: AidaAssistantProps) {
       setDiscovery(result);
     } catch {
       setDiscovery({
-        mode: "mock",
-        source: "Tavily discovery fallback",
+        mode: "empty",
+        source: "Tavily discovery request failed; no default test data",
         query: selected.question,
         result: null,
       });
@@ -421,8 +421,9 @@ export default function AidaAssistant({ questions }: AidaAssistantProps) {
             </div>
           ) : (
             <p className="mt-3 text-sm leading-6 text-[#60706c]">
-              Search open sources to find a candidate article for the next
-              corpus-ingestion step.
+              Search Tavily for a live open-access source. Peerflow will show
+              an empty result rather than default test data if Tavily cannot
+              find an allowed source.
             </p>
           )}
         </div>

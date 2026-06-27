@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   if (!apiKey) {
     return Response.json({
-      mode: "mock",
+      mode: "empty",
       source: "Missing Tavily key",
       query,
       result: null,
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
   if (!query) {
     return Response.json({
-      mode: "mock",
+      mode: "empty",
       source: "Missing search query",
       query,
       result: null,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
     if (!searchResponse.ok) {
       return Response.json({
-        mode: "mock",
+        mode: "empty",
         source: `Tavily search returned ${searchResponse.status}`,
         query,
         result: null,
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
     if (!result?.url) {
       return Response.json({
-        mode: "mock",
+        mode: "empty",
         source: "Tavily found no allowed open-access source",
         query,
         result: null,
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     });
   } catch {
     return Response.json({
-      mode: "mock",
+      mode: "empty",
       source: "Tavily request failed",
       query,
       result: null,

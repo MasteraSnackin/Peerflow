@@ -508,14 +508,27 @@ Response:
 ### `POST /api/tavily/discover`
 
 Searches open-access-friendly sources through Tavily, then extracts text from
-the top allowed source URL. Aida can now use Tavily as live corpus evidence;
-this route remains a direct source-discovery demo for the side challenge.
+the top allowed source URL. This route does not return default test data: it
+returns `live` when Tavily finds an allowed source and `empty` when it does not.
+Aida can use Tavily as live corpus evidence; this route remains a direct
+source-discovery demo for the side challenge.
 
 Request:
 
 ```json
 {
   "query": "Why is multimodal medical image retrieval useful for clinical practice and research?"
+}
+```
+
+Empty response:
+
+```json
+{
+  "mode": "empty",
+  "source": "Tavily found no allowed open-access source",
+  "query": "string",
+  "result": null
 }
 ```
 

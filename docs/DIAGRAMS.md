@@ -104,7 +104,7 @@ flowchart TB
 
   subgraph Data["Local app data and helpers"]
     DataTs["app/data.ts<br/>papers<br/>reviewers<br/>questions<br/>workflow steps"]
-    CorpusHelper["openAccessCorpus.ts<br/>OpenAlex mapping<br/>Tavily fallback<br/>snippet normalisation"]
+    CorpusHelper["openAccessCorpus.ts<br/>OpenAlex mapping<br/>Tavily supplement<br/>snippet normalisation"]
   end
 
   AgentConsole --> VoiceIntake
@@ -210,7 +210,7 @@ flowchart TB
   RefusalGuard{"Patient-specific<br/>treatment advice?"}
   Corpus["openAccessCorpus helper"]
   OpenAlex["OpenAlex works"]
-  Tavily["Tavily fallback"]
+  Tavily["Tavily supplement"]
   Evidence["Allowed evidence set"]
   Gemini["Gemini"]
   CitationCheck{"Returned citations<br/>match evidence set?"}

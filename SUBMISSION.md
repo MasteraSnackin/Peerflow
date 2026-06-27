@@ -28,7 +28,7 @@ the payload.
 | --- | --- | --- |
 | Attio Agentic CRM | Peerflow creates/updates demo author, institution and follow-up task records through the Attio REST API; n8n import workflow includes Attio write nodes for the live orchestration path. | REST API read/write live; native Attio visual workflow not implemented |
 | Superlinked | Semantic reviewer matching. Paper title, abstract and field plus reviewer expertise, institution and past topics are embedded with `all-MiniLM-L6-v2`, then reranked with `ms-marco-MiniLM-L-6-v2`. With the server-only admin token, Peerflow requests a pinned SIE model pool before matching. Returns top 3 reviewer matches with fit scores and pushes them into the Attio follow-up task payload. | Backend route live; proof visible in reviewer panel |
-| Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live |
+| Tavily | Extracts supplemental open-access source text for Aida's live corpus and source discovery. | Live; returns `empty` rather than default test data when no allowed source is found |
 | n8n | Receives one `paper.submitted` event and owns Attio upserts, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Configured, but latest deployed webhook check returned `404`; activate/publish the workflow or correct the production webhook path. Importable downstream workflow file contains the orchestration nodes |
 | SLNG | Author records a submission request; Peerflow sends audio to SLNG STT, then extracts title, field, author, institution and summary for the intake record. | Microphone panel and `/api/slng/intake` route implemented |
 | Aikido | Provides a security report link inside the integration grid. | Configured |
@@ -64,7 +64,8 @@ the payload.
 - Aida/Gemini: live.
 - OpenAlex: live open-access corpus retrieval; an API key is optional but
   recommended for serious use.
-- Tavily: live supplemental extraction and source discovery.
+- Tavily: live supplemental extraction and source discovery, with no default
+  test-data fallback.
 - Attio: REST API read/write is live. Demo companies, people and follow-up
   tasks have been created in the Techeurope Hackathon #9 workspace. Native
   Attio visual workflow setup is not implemented. The Attio developer webhook

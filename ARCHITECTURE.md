@@ -284,15 +284,17 @@ Current n8n workflow canvas:
 
 - Responsibilities: search open-access-friendly sources and extract text from
   the top allowed source URL for direct source discovery and live corpus
-  fallback.
+  supplementation.
 - Main technologies: Next-style `POST` route, TypeScript and server-side
   `fetch`.
 - Data owned or transformed: search query, source title, URL, host, score and
   extracted snippet.
 - External dependencies: Tavily API via `TAVILY_API_KEY`.
 - Failure modes or operational concerns: Tavily results are bounded to an
-  allow-list of open-access-friendly domains. They are not used to bypass
-  Aida's citation guardrails or answer patient-specific treatment advice.
+  allow-list of open-access-friendly domains. The route returns `empty` rather
+  than default test data when Tavily is unavailable or finds no allowed source.
+  Results are not used to bypass Aida's citation guardrails or answer
+  patient-specific treatment advice.
 
 ### Static Demo Data
 
