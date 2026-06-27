@@ -78,7 +78,10 @@ the payload.
 - n8n: production webhook accepts `paper.submitted` events. The app sends the
   n8n orchestration contract in the payload, and
   `n8n/peerflow-hackathon-orchestration.json` contains downstream Attio,
-  reviewer matching, outreach/task and stage-update nodes.
+  reviewer matching, outreach/task and stage-update nodes. The live n8n canvas
+  is recorded at
+  [peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list)
+  and appears in the app as `Open workflow`.
 
 ## Backup Plan
 
@@ -98,6 +101,7 @@ If a live provider is slow during judging:
 - [x] Point the active Attio webhook at the production n8n webhook.
 - [x] Prepare n8n nodes for Attio writes, reviewer matching, outreach/tasks and
       stage update.
+- [x] Record the live n8n Cloud workflow URL in the app and documentation.
 - [ ] Confirm the signed-in n8n Cloud canvas exactly matches
       `n8n/peerflow-hackathon-orchestration.json`.
 - [ ] Add the deployed public URL once hosting is available.

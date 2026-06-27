@@ -66,6 +66,9 @@ export default function AgentConsole({
 
   const selectedPaper =
     papers.find((paper) => paper.id === selectedPaperId) ?? papers[0];
+  const n8nWorkflowUrl = integrations.find(
+    (integration) => integration.service === "n8n",
+  )?.actionUrl;
   const progress = Math.round((completedIds.length / steps.length) * 100);
   const currentStage =
     stageLabels[Math.min(stageLabels.length - 1, completedIds.length - 1)] ??
@@ -391,9 +394,21 @@ export default function AgentConsole({
             <p className="text-sm font-semibold text-[#243632]">
               n8n orchestration
             </p>
-            <span className="rounded-md bg-[#edf2ef] px-2 py-1 text-xs font-semibold text-[#55716a]">
-              one event in
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {n8nWorkflowUrl ? (
+                <a
+                  className="rounded-md border border-[#c8d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#243632] transition hover:bg-[#f2f5f3]"
+                  href={n8nWorkflowUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open workflow
+                </a>
+              ) : null}
+              <span className="rounded-md bg-[#edf2ef] px-2 py-1 text-xs font-semibold text-[#55716a]">
+                one event in
+              </span>
+            </div>
           </div>
           <div className="mt-3 divide-y divide-[#d9e1dd] border-y border-[#d9e1dd]">
             {n8nOrchestrationSteps.map((step, index) => (

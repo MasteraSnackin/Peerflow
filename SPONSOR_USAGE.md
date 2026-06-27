@@ -9,7 +9,7 @@ reviewer matching and follow-up.
 | Sponsor or service | How Peerflow uses it | Current proof |
 | --- | --- | --- |
 | Attio | CRM layer for authors, institutions and follow-up tasks. | Live REST API read/write is working. `npm run attio:seed` created demo companies, people and reviewer outreach tasks in the Attio workspace. |
-| n8n | Orchestration layer. Peerflow sends one `paper.submitted` event to n8n, then n8n owns Attio writes, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Production webhook returns `200` and starts the workflow. Importable workflow file: `n8n/peerflow-hackathon-orchestration.json`. |
+| n8n | Orchestration layer. Peerflow sends one `paper.submitted` event to n8n, then n8n owns Attio writes, reviewer matching, outreach or follow-up tasks, and the `Reviewer matched` stage update. | Production webhook returns `200` and starts the workflow. Live canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow file: `n8n/peerflow-hackathon-orchestration.json`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Peerflow embeds paper title, abstract and field with `all-MiniLM-L6-v2`, embeds reviewer expertise, institution and past review topics, then reranks with `ms-marco-MiniLM-L-6-v2`. | The reviewer panel shows top 3 matches with fit scores, such as `Amara Osei, 94% fit`, and explains this is semantic matching rather than keyword search. n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source discovery and extraction for Aida's live corpus. | `/api/tavily/discover` searches allowed open-access-friendly domains and extracts source snippets. |
 | SLNG | Author voice intake. In Peerflow, the author records a submission request; `/api/slng/intake` sends the audio to SLNG STT; Peerflow extracts title, field, author, institution and summary; that becomes the paper intake record. | The app has a microphone voice-intake panel. The agent log shows `Voice intake parsed by SLNG`, then the structured paper record is visible in the voice panel and Attio record preview. |
@@ -69,6 +69,9 @@ In Peerflow, n8n is used as the orchestration layer:
 The same sequence is shown in the app and carried in the `paper.submitted`
 payload under `orchestration.contract`.
 
+Live workflow canvas for judges:
+[peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
+
 ### SLNG Intake Proof
 
 ![Peerflow SLNG intake proof](docs/assets/peerflow-slng-intake-proof.png)
@@ -115,13 +118,15 @@ workflow and integration readiness together.
 - `/api/slng/intake` returned a live SLNG transcript from a WAV voice sample and
   extracted the structured paper record for `paper-01`.
 - The n8n production webhook returns `200` with `Workflow was started`.
+- The live n8n workflow URL is recorded in the app through
+  `N8N_WORKFLOW_URL` and appears as `Open workflow` for judges.
 - `npm run lint` and `npm run build` pass.
 
 ## Known Gaps
 
 - The repository can verify the importable n8n workflow JSON and webhook
-  acceptance. The exact n8n Cloud canvas still needs to match this JSON in the
-  signed-in workspace.
+  acceptance. The live n8n Cloud canvas URL is recorded, but exact node parity
+  with the JSON remains a manual n8n UI check.
 - There is no custom Attio `paper` object yet. Paper stage is carried in the
   orchestration payload rather than stored as a native Attio paper record.
 - Native Attio visual Workflow/Sequence setup is not implemented.

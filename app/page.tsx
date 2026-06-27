@@ -26,8 +26,11 @@ const integrationDefinitions = [
   },
   {
     service: "n8n",
-    keys: ["N8N_WEBHOOK_URL"],
+    keys: ["N8N_WEBHOOK_URL", "N8N_WORKFLOW_URL"],
     purpose: "Receive paper.submitted and orchestrate CRM, matching and outreach.",
+    requiredKeyGroups: [["N8N_WEBHOOK_URL"]],
+    actionLabel: "Open workflow",
+    actionEnvKey: "N8N_WORKFLOW_URL",
   },
   {
     service: "SLNG",

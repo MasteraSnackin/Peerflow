@@ -15,9 +15,10 @@ webhook calls are enabled when the required environment variables are present.
 The n8n production webhook is published and accepts `paper.submitted` payloads.
 The repository now includes `n8n/peerflow-hackathon-orchestration.json`, an
 importable workflow with downstream Attio write, reviewer matching,
-outreach/task and stage-update nodes. The remaining n8n verification is to
-confirm the signed-in n8n Cloud canvas exactly matches that file. The Aikido
-report URL is shown as external security evidence. SLNG voice intake is
+outreach/task and stage-update nodes. The live n8n workflow canvas URL is
+recorded in `N8N_WORKFLOW_URL`; the remaining n8n verification is to confirm
+the signed-in n8n Cloud canvas exactly matches that file. The Aikido report URL
+is shown as external security evidence. SLNG voice intake is
 implemented through a browser microphone panel and `/api/slng/intake`, which
 calls SLNG STT when configured and returns structured paper intake fields.
 
@@ -93,7 +94,8 @@ scaffolded infrastructure, but no application data is currently persisted there.
 - Main technologies: Next.js app router conventions through vinext, React 19,
   TypeScript and Tailwind CSS.
 - Data owned or transformed: reads static arrays from `app/data.ts` and converts
-  server environment presence into integration status booleans.
+  server environment presence into integration status booleans and public
+  action links such as the n8n workflow canvas URL.
 - External dependencies: none at render time beyond server environment
   variables.
 - Failure modes or operational concerns: the UI can show a service as connected
@@ -234,13 +236,18 @@ scaffolded infrastructure, but no application data is currently persisted there.
 - Data owned or transformed: selected paper metadata, generated event ID, Attio
   record preview objects and n8n orchestration instructions.
 - External dependencies: `N8N_WEBHOOK_URL`; optional `PEERFLOW_PUBLIC_URL` so
-  n8n Cloud can call Peerflow backend routes from outside localhost.
+  n8n Cloud can call Peerflow backend routes from outside localhost; optional
+  `N8N_WORKFLOW_URL` for the non-secret n8n canvas link shown in the app.
 - Failure modes or operational concerns: the production n8n webhook is
-  published and accepts the payload. The downstream workflow nodes are prepared
-  in `n8n/peerflow-hackathon-orchestration.json`, but still need to be imported
-  and published in n8n Cloud. Test webhooks may return `404` unless the n8n
-  workflow is actively listening. The route returns a clearer mock/fallback
-  status rather than blocking the demo.
+  published and accepts the payload. The live n8n workflow URL is recorded, and
+  the downstream workflow shape is represented in
+  `n8n/peerflow-hackathon-orchestration.json`. Exact node parity with the
+  signed-in canvas remains a manual UI check. Test webhooks may return `404`
+  unless the n8n workflow is actively listening. The route returns a clearer
+  mock/fallback status rather than blocking the demo.
+
+Current n8n workflow canvas:
+[peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
 
 ### Attio Webhook
 
@@ -406,8 +413,9 @@ Limits and risks:
   monitoring would need clearer error reporting.
 - n8n orchestration is triggered during the agent run. The cloud workflow
   currently proves webhook acceptance; the prepared import file defines the
-  full downstream workflow but still needs to be published. There is no durable
-  run-status polling or retry mechanism yet.
+  full downstream workflow and the live canvas URL is recorded. Exact node
+  parity with the signed-in n8n canvas remains a manual UI check. There is no
+  durable run-status polling or retry mechanism yet.
 - Attio record creation is not implemented in the browser route. The app
   previews the record shape and uses a read-only Attio validation route. Live
   Attio write proof exists through the seed script and prepared n8n import

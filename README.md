@@ -99,8 +99,10 @@ the event, calls Attio to create or update records, calls Peerflow's
 Superlinked reviewer-matching route or Superlinked directly, creates reviewer
 outreach or follow-up tasks, and updates the paper stage to
 `Reviewer matched`. The current n8n production webhook is published and accepts
-the event payload; the repository workflow JSON contains the downstream nodes
-for the full orchestration path.
+the event payload. The live n8n workflow canvas is recorded at
+[peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list),
+and the repository workflow JSON contains the downstream nodes for the full
+orchestration path.
 SLNG and Aikido are configured through environment variables so live services
 can be plugged in without exposing credentials to the browser.
 
@@ -114,7 +116,7 @@ sequence diagrams, trust boundary, state, deployment and proof-map views.
 | Service | How Peerflow uses it | Current status |
 | --- | --- | --- |
 | Attio | CRM system for authors, institutions and follow-up tasks. | REST API read/write is live. `npm run attio:seed` has created demo companies, people and follow-up tasks. Native Attio visual workflow setup and a custom paper object are not implemented. |
-| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
+| n8n | Orchestration layer for `paper.submitted`. | Production webhook is published and accepts events. Live workflow canvas: [Peerflow n8n workflow](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list). Importable workflow nodes in `n8n/peerflow-hackathon-orchestration.json` receive the event, call Attio, call reviewer matching, create outreach tasks and return `Reviewer matched`. |
 | Superlinked | Semantic reviewer matching through Superlinked's open-source inference engine. Paper title, abstract and field are embedded with `all-MiniLM-L6-v2`; reviewer expertise, institution and past topics are embedded too; matches are reranked with `ms-marco-MiniLM-L-6-v2`. | Backend route returns top 3 reviewer matches with fit scores, such as `Amara Osei, 94% fit`; n8n pushes those matches into the Attio follow-up task payload. |
 | Tavily | Open-access source search and extraction. | Live when `TAVILY_API_KEY` is configured. |
 | Aida/Gemini/OpenAlex | Corpus-grounded Q&A over legal open-access evidence. | Live retrieval via OpenAlex; Gemini answers when a model key is configured, with citation validation and fallback behaviour. |
@@ -168,8 +170,9 @@ Typical demo flow:
 6. Show Peerflow sending one `paper.submitted` event to n8n.
 7. Explain that n8n owns Attio upserts, reviewer matching, outreach/tasks and
    the `Reviewer matched` stage update.
-8. Open `n8n/peerflow-hackathon-orchestration.json` if judges ask to inspect
-   the workflow structure.
+8. Open the live n8n workflow from the app's n8n card, or inspect
+   `n8n/peerflow-hackathon-orchestration.json` if judges ask for the
+   repository workflow structure.
 9. Open the Aikido security report from the integration grid.
 10. Explain the SLNG proof: author speaks, SLNG turns the request into
     structured text, and Peerflow extracts title, field, author, institution
@@ -184,6 +187,7 @@ to run live.
 ATTIO_API_KEY=
 ATTIO_WORKSPACE_ID=
 N8N_WEBHOOK_URL=
+N8N_WORKFLOW_URL=https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list
 PEERFLOW_PUBLIC_URL=
 SLNG_API_KEY=
 SLNG_STT_URL=https://api.slng.ai/v1/stt/slng/deepgram/nova:3-en
@@ -215,6 +219,7 @@ Environment variable notes:
 | `ATTIO_API_KEY` | Attio API key for workspace validation and live demo CRM writes. |
 | `ATTIO_WORKSPACE_ID` | Target Attio workspace identifier. |
 | `N8N_WEBHOOK_URL` | n8n production webhook that receives `paper.submitted`. |
+| `N8N_WORKFLOW_URL` | Non-secret n8n Cloud canvas URL shown as `Open workflow` in the app. |
 | `PEERFLOW_PUBLIC_URL` | Optional deployed or tunnelled base URL so n8n Cloud can call Peerflow backend routes. |
 | `SLNG_API_KEY` | SLNG voice intake integration for structured paper intake. |
 | `SLNG_STT_URL` | Optional SLNG speech-to-text endpoint override. |
@@ -431,7 +436,9 @@ listening; use `Execute workflow` in n8n or switch to the production
 `/webhook/...` URL from an activated workflow.
 
 The published Peerflow n8n webhook currently proves payload acceptance. The
-workflow import file defines the downstream orchestration path:
+live n8n workflow canvas is recorded at
+[peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
+The workflow import file defines the downstream orchestration path:
 
 1. Receive one `paper.submitted` webhook event from Peerflow.
 2. Call Attio to create or update institution and author records.
@@ -440,8 +447,9 @@ workflow import file defines the downstream orchestration path:
 4. Create an Attio reviewer outreach or follow-up task with the match scores.
 5. Return the final paper stage as `Reviewer matched`.
 
-Unknown: the repository can verify the importable workflow JSON, but the exact
-n8n Cloud canvas still has to match this JSON in the signed-in workspace.
+Unknown: the repository can verify the importable workflow JSON and records the
+live n8n Cloud workflow URL, but exact node parity with the signed-in canvas is
+still a manual n8n UI check.
 
 Request:
 
@@ -523,7 +531,8 @@ sponsor mapping and final checklist.
 
 ## Roadmap
 
-- Import and publish the prepared n8n workflow in n8n Cloud.
+- Keep the live n8n workflow canvas aligned with
+  `n8n/peerflow-hackathon-orchestration.json`.
 - Promote the n8n trigger from webhook acceptance to durable workflow run
   tracking.
 - Improve SLNG field extraction for arbitrary author submissions.

@@ -342,6 +342,9 @@ sequenceDiagram
 
 ## n8n Workflow Ownership
 
+Live n8n canvas:
+[peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u](https://peerflow.app.n8n.cloud/workflow/jzwLgV8qqsVSPM9u?projectId=7UmZAgpCylS4FmJs&uiContext=workflow_list).
+
 ```mermaid
 flowchart LR
   Webhook["Webhook<br/>paper.submitted"]
